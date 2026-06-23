@@ -1,7 +1,7 @@
 # ──────────────────────────────────────────────────
 # Stage 1: Chef — Dependency planning
 # ──────────────────────────────────────────────────
-FROM rust:1.85-slim-bookworm AS chef
+FROM rust:1.96-slim-bookworm AS chef
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config libssl-dev binutils && rm -rf /var/lib/apt/lists/*
 # BuildKit cache mount avoids re-downloading crate index on repeated builds

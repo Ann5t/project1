@@ -336,7 +336,7 @@ async fn execute_single_step(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::types::WorkflowEdge;
+    use crate::workflow::types::WorkflowEdge;
     use crate::llm::types::*;
     use async_trait::async_trait;
     use std::sync::Arc;

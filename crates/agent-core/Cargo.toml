@@ -1,0 +1,34 @@
+[package]
+name = "agent-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+agent-db = { path = "../agent-db" }
+tokio.workspace = true
+axum.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+async-trait.workspace = true
+thiserror.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+bytes = "1"
+futures.workspace = true
+tokio-stream.workspace = true
+tokio-cron-scheduler.workspace = true
+comrak.workspace = true
+tracing.workspace = true
+sqlx.workspace = true
+meval = "0.2"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }
+futures.workspace = true
+serde_json.workspace = true

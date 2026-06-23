@@ -1,0 +1,20 @@
+# ── Complexity Thresholds ──────────────────
+cognitive-complexity-threshold = 20
+too-many-lines-threshold = 150
+too-many-arguments-threshold = 6
+
+# ── Naming ─────────────────────────────────
+disallowed-names = ["foo", "bar", "baz", "qux"]
+
+# ── Disallowed Methods ─────────────────────
+disallowed-methods = [
+    { path = "std::env::var", reason = "Use std::env::var_os for better Unicode handling" },
+    { path = "std::process::exit", reason = "Use Result propagation instead of killing the process" },
+    { path = "std::mem::forget", reason = "Risk of leaking resources; prefer explicit drop mechanisms" },
+]
+
+# ── Allowed Scripts (for wasm-unaware crates) ──
+allowed-scripts = []
+
+# ── Type Alias Settings ────────────────────
+trivial-copy-size-limit = 64

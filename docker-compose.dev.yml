@@ -1,0 +1,26 @@
+# Development override — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# or for local development without Docker:
+#   cargo run --bin agent-server
+
+services:
+  agent:
+    build:
+      target: builder
+    volumes:
+      - ./crates:/app/crates
+      - ./Cargo.toml:/app/Cargo.toml
+      - ./Cargo.lock:/app/Cargo.lock
+      - agent_data:/app/data
+      - cargo_cache:/usr/local/cargo/registry
+    environment:
+      - RUST_LOG=debug
+      - DATABASE_PATH=/app/data/agent.db
+      - FRONTEND_DIR=/app/frontend
+      - BIND_ADDRESS=0.0.0.0:3000
+    ports:
+      - "3000:3000"
+    command: cargo watch -x "run --bin agent-server"
+
+volumes:
+  cargo_cache:

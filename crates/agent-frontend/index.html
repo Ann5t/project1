@@ -1,0 +1,137 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Agent</title>
+<meta name="description" content="AI Agent">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="color-scheme" content="dark light">
+<meta property="og:title" content="AI Agent">
+<meta property="og:description" content="智能对话、工作流编排、定时任务自动化平台">
+<meta property="og:type" content="website">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+<link rel="apple-touch-icon" href="assets/logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.0/cytoscape.min.js"></script>
+<script src="https://unpkg.com/cytoscape-minimap/cytoscape-minimap.js"></script>
+</head>
+<body class="dark">
+<a href="#main-start" class="skip-to-content">跳转到主内容 Skip to main content</a>
+<!-- Hamburger (mobile) -->
+<button class="hamburger-btn" id="hamburger-btn" data-i18n-aria="page.menu">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+<!-- Sidebar overlay (mobile) -->
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-header-top">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 32 32" fill="none">
+          <defs><linearGradient id="lg" x1="0" y1="0" x2="32" y2="32"><stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient></defs>
+          <rect width="32" height="32" rx="8" fill="url(#lg)"/>
+          <path d="M10 22V10l6 4 6-4v12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        <span class="logo-text">AI Agent</span>
+      </div>
+    </div>
+    <button class="new-chat-btn" id="new-chat-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span data-i18n="chat.new_chat">新对话</span>
+    </button>
+  </div>
+  <div class="sidebar-nav">
+    <a href="#/" class="nav-item active" data-route="/">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span data-i18n="nav.chat">对话</span>
+    </a>
+    <a href="#/sessions" class="nav-item" data-route="/sessions">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span data-i18n="nav.sessions">会话</span>
+    </a>
+    <a href="#/workflows" class="nav-item" data-route="/workflows">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h10M4 17h6"/><circle cx="18" cy="7" r="2"/><circle cx="14" cy="12" r="2"/><circle cx="10" cy="17" r="2"/><line x1="16" y1="8.5" x2="13.5" y2="10.5"/><line x1="12.5" y1="13.5" x2="11" y2="15.5"/></svg>
+      <span data-i18n="nav.workflows">工作流</span>
+    </a>
+    <a href="#/tasks" class="nav-item" data-route="/tasks">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span data-i18n="nav.tasks">定时任务</span>
+    </a>
+  </div>
+  <div class="sidebar-footer">
+    <a href="#/config" class="nav-item" data-route="/config">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <span data-i18n="nav.settings">设置</span>
+    </a>
+    <button class="theme-toggle-btn" id="theme-toggle-btn" data-i18n-aria="theme.switch">
+      <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <span id="theme-label"><span data-i18n="theme.dark">深色模式</span></span>
+    </button>
+  </div>
+</nav>
+<main class="main-content" id="app-content">
+  <div id="main-start" tabindex="-1"></div>
+  <div class="page-transition-wrapper" id="page-transition-wrapper">
+    <div class="page-loading"><span data-i18n="common.loading">加载中...</span></div>
+  </div>
+</main>
+
+<!-- Keyboard shortcuts modal -->
+<div class="shortcuts-modal-overlay" id="shortcuts-overlay" style="display:none;">
+  <div class="shortcuts-modal scale-in" id="shortcuts-modal" role="dialog" data-i18n-aria="shortcuts.title">
+    <div class="shortcuts-modal-header">
+      <h2 class="shortcuts-title"><span data-i18n="shortcuts.title">键盘快捷键</span></h2>
+      <button class="shortcuts-close-btn" id="shortcuts-close-btn" data-i18n-aria="shortcuts.close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="shortcuts-list">
+      <div class="shortcuts-section">
+        <h3 class="shortcuts-section-title"><span data-i18n="shortcuts.section_global">全局</span></h3>
+        <div class="shortcuts-row"><kbd>Ctrl</kbd> + <kbd>K</kbd><span data-i18n="shortcuts.cmd_palette">命令面板 (快速搜索命令与会话)</span></div>
+        <div class="shortcuts-row"><kbd>?</kbd> 或 <kbd>Ctrl</kbd> + <kbd>/</kbd><span data-i18n="shortcuts.toggle_shortcuts">显示/隐藏快捷键面板</span></div>
+        <div class="shortcuts-row"><kbd>Esc</kbd><span data-i18n="shortcuts.esc_cancel">关闭面板 / 取消操作</span></div>
+        <div class="shortcuts-row"><kbd>Ctrl</kbd> + <kbd>1-5</kbd><span data-i18n="shortcuts.nav_tabs">导航: 对话 / 会话 / 工作流 / 定时任务 / 设置</span></div>
+        <div class="shortcuts-row"><kbd>Ctrl</kbd> + <kbd>[</kbd> <kbd>]</kbd><span data-i18n="shortcuts.back_forward">后退 / 前进</span></div>
+      </div>
+      <div class="shortcuts-section">
+        <h3 class="shortcuts-section-title"><span data-i18n="shortcuts.section_chat">对话</span></h3>
+        <div class="shortcuts-row"><kbd>Enter</kbd><span data-i18n="shortcuts.enter_send">发送消息</span></div>
+        <div class="shortcuts-row"><kbd>Shift</kbd> + <kbd>Enter</kbd><span data-i18n="shortcuts.shift_enter_newline">换行</span></div>
+        <div class="shortcuts-row"><kbd>Ctrl</kbd> + <kbd>Enter</kbd><span data-i18n="shortcuts.ctrl_enter_send">发送消息</span></div>
+        <div class="shortcuts-row"><kbd>Ctrl</kbd> + <kbd>N</kbd><span data-i18n="shortcuts.ctrl_n_new">新建对话</span></div>
+      </div>
+      <div class="shortcuts-section">
+        <h3 class="shortcuts-section-title"><span data-i18n="shortcuts.section_workflow">工作流编辑器</span></h3>
+        <div class="shortcuts-row"><kbd>Ctrl</kbd> + <kbd>S</kbd><span data-i18n="shortcuts.ctrl_s_save">保存工作流</span></div>
+        <div class="shortcuts-row"><kbd>Ctrl</kbd> + <kbd>Enter</kbd><span data-i18n="shortcuts.ctrl_enter_run">运行工作流</span></div>
+        <div class="shortcuts-row"><kbd>Delete</kbd><span data-i18n="shortcuts.del_node">删除选中节点/连线</span></div>
+        <div class="shortcuts-row"><kbd>F</kbd><span data-i18n="shortcuts.fit_canvas">适应画布</span></div>
+        <div class="shortcuts-row"><kbd>L</kbd><span data-i18n="shortcuts.auto_layout">自动布局</span></div>
+        <div class="shortcuts-row"><kbd>C</kbd><span data-i18n="shortcuts.edge_mode">连线模式</span></div>
+      </div>
+    </div>
+    <div class="shortcuts-modal-footer">
+      <span data-i18n="shortcuts.footer">按 ? 随时查看快捷键，按 Ctrl+K 打开命令面板</span>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/i18n.js"></script>
+<script type="module" src="js/shortcuts.js"></script>
+<script type="module" src="js/auth.js"></script>
+<script type="module" src="js/app.js"></script>
+<script type="module" src="js/onboarding.js"></script>
+<script type="module" src="js/realtime.js"></script>
+</body>
+</html>

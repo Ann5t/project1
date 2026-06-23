@@ -1,0 +1,44 @@
+# ──────────────────────────────────────────────────
+# Production override — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# This file applies security hardening and production-
+# grade logging on top of the base compose definition.
+# It does NOT duplicate settings already in the base
+# file (image, ports, environment, volumes, etc.).
+# ──────────────────────────────────────────────────
+
+services:
+  agent:
+    # ── Security hardening ──────────────────────
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+    # tmpfs for writable directories needed at runtime.
+    # /app/data is already backed by a named volume in
+    # the base compose, so it remains writable. Only
+    # /tmp needs an explicit tmpfs mount for transient
+    # scratch space (e.g. Rust std::env::temp_dir).
+    tmpfs:
+      - /tmp:exec,size=64M
+      - /run:size=16M
+
+    # ── Stronger resource limits ────────────────
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+    # ── Production logging ──────────────────────
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

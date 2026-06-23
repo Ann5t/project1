@@ -1,0 +1,152 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/agent-server",
+    "crates/agent-core",
+    "crates/agent-db",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["AI Agent Team"]
+license = "MIT"
+
+# ── Clippy Lint Configuration ──────────────
+[workspace.lints.clippy]
+# Lint groups use priority -1 so individual lints can override them
+correctness = { level = "deny", priority = -1 }
+complexity = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+style = { level = "warn", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+
+# Allow specific pedantic lints that are too noisy
+must_use_candidate = "allow"
+missing_errors_doc = "allow"
+module_name_repetitions = "allow"
+similar_names = "allow"
+too_many_lines = "allow"
+cast_precision_loss = "allow"
+
+# Restriction lints (opt-in, enabled selectively)
+clone_on_ref_ptr = "warn"
+dbg_macro = "warn"
+print_stdout = "warn"
+todo = "warn"
+unimplemented = "warn"
+unwrap_used = "warn"
+
+# Nursery lints (experimental)
+use_self = "warn"
+
+# Cargo lints — disabled for internal workspace crate (no crates.io publishing needed)
+cargo_common_metadata = "allow"
+
+# ── Release Profile: maximum optimization for production ──
+# Uses fat LTO + single codegen-unit for the best runtime performance.
+# ThinLTO is also provided as a faster alternative for CI.
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
+
+# ThinLTO profile: ~85-95% of fat LTO performance, much faster linking
+[profile.release-thin]
+inherits = "release"
+lto = "thin"
+
+# Profile with debug symbols for profiling (flamegraph, perf, heaptrack)
+[profile.release-with-debug]
+inherits = "release"
+debug = 1
+
+# ── Dev Profile: optimize build times for inner dev loop ──
+[profile.dev]
+opt-level = 0
+debug = 1
+# Reduce the number of codegen units for faster incremental compilation
+codegen-units = 256
+# Use thin LTO in dev only for the final crate to speed up link step
+lto = "off"
+
+# CI/bench profile: optimize dependencies, debug info for the top crate
+[profile.ci]
+inherits = "dev"
+opt-level = 1
+debug = 1
+# Only optimize dependencies for faster iteration
+[profile.dev.package."*"]
+opt-level = 1
+debug = 0
+
+[workspace.dependencies]
+# ── Async Runtime ──────────────────────────
+tokio = { version = "1", features = ["full"] }
+
+# ── Web Framework ──────────────────────────
+axum = { version = "0.8", features = ["macros", "ws"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = [
+    "cors",
+    "compression-gzip",
+    "compression-br",
+    "trace",
+    "fs",
+    "set-header",
+    "limit",
+] }
+
+# ── HTTP Client ────────────────────────────
+reqwest = { version = "0.12", features = ["json", "stream"] }
+
+# ── Database ───────────────────────────────
+sqlx = { version = "0.8", features = [
+    "runtime-tokio",
+    "sqlite",
+    "chrono",
+    "migrate",
+] }
+
+# ── Scheduling ─────────────────────────────
+tokio-cron-scheduler = "0.13"
+
+# ── Serialization ──────────────────────────
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# ── Error Handling ─────────────────────────
+thiserror = "2"
+anyhow = "1"
+
+# ── Async Traits ───────────────────────────
+async-trait = "0.1"
+
+# ── Identifiers ────────────────────────────
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# ── Date/Time ──────────────────────────────
+chrono = { version = "0.4", features = ["serde"] }
+
+# ── Logging/Tracing ────────────────────────
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# ── Streams ────────────────────────────────
+futures = "0.3"
+tokio-stream = { version = "0.1", features = ["sync"] }
+
+# ── Markdown Rendering ─────────────────────
+comrak = "0.29"
+
+# ── Environment Config ─────────────────────
+dotenvy = "0.15"
+
+# ── System Monitoring ──────────────────────
+sysinfo = "0.33"
+
+# ── Email ─────────────────────────────────────
+lettre = { version = "0.11", default-features = false, features = ["builder", "hostname", "smtp-transport", "tokio1", "tokio1-rustls-tls"] }

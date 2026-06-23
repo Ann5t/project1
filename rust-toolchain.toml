@@ -1,0 +1,12 @@
+[toolchain]
+# Pinned to match the base image in Dockerfile (rust:1.85-slim-bookworm).
+# Run `rustup update` if you need to bump this.
+channel = "1.85"
+components = [
+    "rustfmt",
+    "clippy",
+    "rust-docs",
+]
+targets = [
+    "x86_64-unknown-linux-gnu",
+]

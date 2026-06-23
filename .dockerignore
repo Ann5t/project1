@@ -1,0 +1,74 @@
+# ── Build artifacts ──────────────────────────
+target/
+data/
+
+# ── Version control ──────────────────────────
+.git/
+.gitignore
+.gitattributes
+
+# ── Docker files ─────────────────────────────
+.dockerignore
+
+# ── Environment & secrets ────────────────────
+.env
+.env.*
+*.pem
+*.key
+
+# ── Documentation & markdown (keep README) ──
+*.md
+!README.md
+
+# ── IDE & editor files ───────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+
+# ── OS generated files ───────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ── Rust-specific ────────────────────────────
+**/*.rs.bk
+**/*.pdb
+
+# ── Node / frontend build artifacts (if any) ─
+node_modules/
+**/node_modules/
+dist/
+build/
+
+# ── CI / GitHub workflows ───────────────────
+.claude/
+
+# ── Utility scripts ─────────────────────────
+scripts/
+
+# ── Rust toolchain (Docker uses its own) ────
+rust-toolchain.toml
+clippy.toml
+
+# ── SQLite database files ────────────────────
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# ── Temporary & patch files ─────────────────
+**/*.tmp
+**/*.bak
+*.patch
+*.diff
+
+# ── Test coverage / profiling output ────────
+*.profraw
+*.profdata
+lcov.info
+coverage/

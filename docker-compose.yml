@@ -1,0 +1,112 @@
+# ============================================================================
+# AI Agent — Docker Compose Orchestration
+# ============================================================================
+# Start:   docker compose up -d
+# Rebuild: docker compose up -d --build
+# Logs:    docker compose logs -f agent
+# Shell:   docker compose exec agent sh
+# ============================================================================
+
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: ai-agent:latest
+    container_name: ai-agent
+    init: true
+    stop_grace_period: 30s
+
+    # ------------------------------------------------------------------
+    # Environment (load .env for secrets, override with inline defaults)
+    # ------------------------------------------------------------------
+    env_file:
+      - .env
+    environment:
+      - RUST_LOG=${RUST_LOG:-info}
+      - DATABASE_PATH=/app/data/agent.db
+      - FRONTEND_DIR=/app/frontend
+      - BIND_ADDRESS=0.0.0.0:3000
+      # Set to "true" or "1" to enable shell command execution tool (use with caution)
+      - SHELL_TOOL_ENABLED=${SHELL_TOOL_ENABLED:-false}
+
+    # ------------------------------------------------------------------
+    # Networking
+    # ------------------------------------------------------------------
+    ports:
+      - "${BIND_PORT:-3000}:3000"
+    networks:
+      - agent_network
+
+    # ------------------------------------------------------------------
+    # Persistent storage (SQLite database)
+    # ------------------------------------------------------------------
+    volumes:
+      - agent_data:/app/data
+
+    # ------------------------------------------------------------------
+    # Restart policy
+    # ------------------------------------------------------------------
+    restart: unless-stopped
+
+    # ------------------------------------------------------------------
+    # Health check (overrides the Dockerfile HEALTHCHECK)
+    # ------------------------------------------------------------------
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+    # ------------------------------------------------------------------
+    # File-descriptor limits (pids limit is set in deploy.resources below)
+    # ------------------------------------------------------------------
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+    # ------------------------------------------------------------------
+    # Resource constraints
+    # ------------------------------------------------------------------
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+
+    # ------------------------------------------------------------------
+    # Logging (rotation to prevent disk exhaustion)
+    # ------------------------------------------------------------------
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # ------------------------------------------------------------------
+    # Metadata
+    # ------------------------------------------------------------------
+    labels:
+      - "com.docker.compose.project=ai-agent"
+      - "com.docker.compose.service=agent"
+      - "com.ai-agent.version=1.0"
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  agent_network:
+    driver: bridge
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  agent_data:
+    driver: local

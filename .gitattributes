@@ -1,0 +1,6 @@
+* text=auto
+*.rs diff=rust
+Cargo.toml linguist-language=Rust
+Cargo.lock linguist-language=Rust
+Dockerfile linguist-language=Dockerfile
+*.md diff=markdown

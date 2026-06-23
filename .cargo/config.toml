@@ -1,0 +1,45 @@
+# ── Build Acceleration & Linker Configuration ──
+#
+# Install prerequisites (one-time setup):
+#   cargo install sccache          # compiler cache (cross-platform)
+#   Windows: rustup comes with rust-lld (LLVM's lld), no extra install needed
+#   Linux:   sudo apt install mold clang    # mold is the fastest linker; lld as fallback
+#   macOS:   brew install mold sccache      # mold via Homebrew
+#
+# After installing sccache, uncomment the [build] section below.
+# Verify with: sccache --show-stats
+
+# ── Build Settings ──
+# Uncomment after `cargo install sccache`:
+# [build]
+# rustc-wrapper = "sccache"
+
+# ── Target-specific Linker Configuration ──
+# Windows (MSVC): rust-lld is automatically used by rustup — no config needed.
+# For GNU toolchain on Windows, uncomment the x86_64-pc-windows-gnu section.
+
+[target.x86_64-pc-windows-msvc]
+# MSVC uses rust-lld by default. No action needed.
+# If you want to experiment with lld-link directly:
+# rustflags = ["-C", "link-arg=/OPT:REF", "-C", "link-arg=/OPT:ICF"]
+
+[target.x86_64-unknown-linux-gnu]
+# Use mold (fastest) — install with `sudo apt install mold`
+# rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+# Fallback: use lld — install with `sudo apt install lld`
+# rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+# Or if mold is installed, prefer it:
+rustflags = [
+    "-C", "link-arg=-fuse-ld=mold",
+    "-C", "force-frame-pointers=yes",
+]
+
+[target.x86_64-apple-darwin]
+# macOS: mold is available via Homebrew (`brew install mold`)
+# rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+# Default Apple ld64 is fine for most projects
+
+# ── RUSTFLAGS for release builds ──
+# These apply to ALL profiles. For profile-specific flags, use Cargo.toml [profile.*] sections.
+# - force-frame-pointers=yes: needed for perf/flamegraph profiling
+# - The linker plugin for LTO is automatically enabled by Cargo's lto profile setting.

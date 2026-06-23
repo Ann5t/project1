@@ -104,7 +104,7 @@ tower-http = { version = "0.6", features = [
 reqwest = { version = "0.12", features = ["json", "stream"] }
 
 # ── Database ───────────────────────────────
-sqlx = { version = "0.8", features = [
+sqlx = { version = "0.9", features = [
     "runtime-tokio",
     "sqlite",
     "chrono",

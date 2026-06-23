@@ -35,7 +35,7 @@ hmac = "0.12"
 hex = "0.4"
 base64 = "0.22"
 quick-xml = "0.39"
-rand = "0.8"
+rand = "0.9"
 tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
 sysinfo.workspace = true
 comrak.workspace = true

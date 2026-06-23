@@ -146,7 +146,7 @@ comrak = "0.29"
 dotenvy = "0.15"
 
 # ── System Monitoring ──────────────────────
-sysinfo = "0.33"
+sysinfo = "0.39"
 
 # ── Email ─────────────────────────────────────
 lettre = { version = "0.11", default-features = false, features = ["builder", "hostname", "smtp-transport", "tokio1", "tokio1-rustls-tls"] }

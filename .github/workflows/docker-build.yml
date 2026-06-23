@@ -51,13 +51,5 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Save image as artifact
-        run: |
-          docker image save -o /tmp/ai-agent-image.tar ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-      - name: Upload image artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ai-agent-docker-image
-          path: /tmp/ai-agent-image.tar
-          retention-days: 7
+      # Note: image is already pushed to ghcr.io above.
+      # No need to save/download artifact — servers pull directly from ghcr.io.

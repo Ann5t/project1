@@ -275,10 +275,7 @@ pub enum WxMessage {
     Text(WxTextMessage),
     Image(WxImageMessage),
     Event(WxEventMessage),
-    Unknown {
-        msg_type: String,
-        raw_xml: String,
-    },
+    Unknown { msg_type: String, raw_xml: String },
 }
 
 impl WxMessage {
@@ -290,7 +287,8 @@ impl WxMessage {
         let mut reader = Reader::from_str(xml_str);
         reader.config_mut().trim_text(true);
 
-        let mut fields: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+        let mut fields: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
         let mut current_tag = String::new();
 
         loop {
@@ -446,7 +444,10 @@ fn check_wx_response(errcode: i32, errmsg: Option<&str>) -> Result<(), String> {
     if errcode != 0 {
         let msg = errmsg.unwrap_or("unknown");
         let detail = wx_error_message(errcode);
-        Err(format!("WeChat Work API error {}: {} -- {}", errcode, msg, detail))
+        Err(format!(
+            "WeChat Work API error {}: {} -- {}",
+            errcode, msg, detail
+        ))
     } else {
         Ok(())
     }
@@ -654,11 +655,7 @@ impl WechatWorkChannel {
     ///
     /// `to_user` can be a single UserID, multiple UserIDs separated by "|",
     /// "@all" for everyone, or a department/party ID.
-    pub async fn send_text_message(
-        &self,
-        to_user: &str,
-        content: &str,
-    ) -> Result<(), String> {
+    pub async fn send_text_message(&self, to_user: &str, content: &str) -> Result<(), String> {
         let token = self.get_access_token().await?;
 
         let body = serde_json::json!({
@@ -700,11 +697,7 @@ impl WechatWorkChannel {
     }
 
     /// Send a markdown message to one or more users.
-    pub async fn send_markdown(
-        &self,
-        to_user: &str,
-        content: &str,
-    ) -> Result<(), String> {
+    pub async fn send_markdown(&self, to_user: &str, content: &str) -> Result<(), String> {
         let token = self.get_access_token().await?;
 
         let body = serde_json::json!({
@@ -741,11 +734,7 @@ impl WechatWorkChannel {
     /// Send a news (图文) article card message to one or more users.
     ///
     /// Each article entry contains: title, description, url, and optional picurl (cover image).
-    pub async fn send_news(
-        &self,
-        to_user: &str,
-        articles: &[NewsArticle],
-    ) -> Result<(), String> {
+    pub async fn send_news(&self, to_user: &str, articles: &[NewsArticle]) -> Result<(), String> {
         if articles.is_empty() {
             return Err("No articles to send".to_string());
         }

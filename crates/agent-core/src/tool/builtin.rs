@@ -49,10 +49,7 @@ impl Tool for CalculatorTool {
     }
 
     async fn execute(&self, arguments: serde_json::Value) -> Result<String, CoreError> {
-        let expr = arguments["expression"]
-            .as_str()
-            .unwrap_or("0")
-            .to_string();
+        let expr = arguments["expression"].as_str().unwrap_or("0").to_string();
 
         match meval::eval_str(&expr) {
             Ok(result) => Ok(format!("Result: {result}")),
@@ -141,10 +138,7 @@ impl Tool for WebSearchTool {
 
     async fn execute(&self, arguments: serde_json::Value) -> Result<String, CoreError> {
         let query = arguments["query"].as_str().unwrap_or("");
-        let max_results = arguments["num_results"]
-            .as_u64()
-            .unwrap_or(5)
-            .min(10) as usize;
+        let max_results = arguments["num_results"].as_u64().unwrap_or(5).min(10) as usize;
 
         if query.is_empty() {
             return Err(CoreError::ToolError {
@@ -264,11 +258,7 @@ mod tests {
             .await
             .unwrap();
         // sin(pi/6) = 0.5
-        let val: f64 = result
-            .strip_prefix("Result: ")
-            .unwrap()
-            .parse()
-            .unwrap();
+        let val: f64 = result.strip_prefix("Result: ").unwrap().parse().unwrap();
         assert!((val - 0.5).abs() < 0.001, "Expected ~0.5, got: {}", val);
     }
 
@@ -287,10 +277,7 @@ mod tests {
         let tool = CalculatorTool;
 
         // Missing expression key
-        let result = tool
-            .execute(serde_json::json!({}))
-            .await
-            .unwrap();
+        let result = tool.execute(serde_json::json!({})).await.unwrap();
         assert!(result.contains("0"), "Expected 0, got: {}", result);
     }
 
@@ -343,8 +330,7 @@ mod tests {
     fn urlencoding_unicode() {
         let encoded = urlencoding("你好");
         // The character '你' is U+4F60, encoded as %4F60 by this implementation
-        assert!(encoded.starts_with("%4F"),
-            "Got: {}", encoded);
+        assert!(encoded.starts_with("%4F"), "Got: {}", encoded);
         assert!(!encoded.is_empty());
     }
 
@@ -365,16 +351,10 @@ mod tests {
     async fn web_search_empty_query_returns_error() {
         let tool = WebSearchTool;
 
-        let result = tool
-            .execute(serde_json::json!({"query": ""}))
-            .await;
+        let result = tool.execute(serde_json::json!({"query": ""})).await;
         assert!(result.is_err(), "Expected error for empty query");
         let err = result.unwrap_err().to_string();
-        assert!(
-            err.contains("cannot be empty"),
-            "Got: {}",
-            err
-        );
+        assert!(err.contains("cannot be empty"), "Got: {}", err);
     }
 
     // ── Tool Metadata ──
@@ -387,7 +367,10 @@ mod tests {
 
         let schema = tool.parameters_schema();
         assert_eq!(schema["type"], "object");
-        assert!(schema["required"].as_array().unwrap().contains(&serde_json::json!("expression")));
+        assert!(schema["required"]
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!("expression")));
     }
 
     #[test]
@@ -410,7 +393,10 @@ mod tests {
 
         let schema = tool.parameters_schema();
         assert_eq!(schema["type"], "object");
-        assert!(schema["required"].as_array().unwrap().contains(&serde_json::json!("query")));
+        assert!(schema["required"]
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!("query")));
     }
 
     // ── ReadFileTool ──
@@ -421,9 +407,7 @@ mod tests {
         let dir = std::env::temp_dir();
         let tool = ReadFileTool::new(dir);
 
-        let result = tool
-            .execute(serde_json::json!({"path": ""}))
-            .await;
+        let result = tool.execute(serde_json::json!({"path": ""})).await;
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("cannot be empty"), "Got: {}", err);
@@ -513,8 +497,8 @@ impl ReadFileTool {
     /// Create from the ALLOWED_DATA_DIR environment variable (defaults to "data").
     #[allow(clippy::disallowed_methods)]
     pub fn from_env() -> Self {
-        let dir = env::var("ALLOWED_DATA_DIR")
-            .map_or_else(|_| PathBuf::from("data"), PathBuf::from);
+        let dir =
+            env::var("ALLOWED_DATA_DIR").map_or_else(|_| PathBuf::from("data"), PathBuf::from);
         Self::new(dir)
     }
 }
@@ -751,26 +735,30 @@ impl Tool for ExecuteShellTool {
             match child.try_wait() {
                 Ok(Some(status)) => {
                     let elapsed = start.elapsed();
-                    let stdout = String::from_utf8_lossy(
-                        &child.stdout.take().map_or(Vec::new(), |mut p| {
+                    let stdout = String::from_utf8_lossy(&child.stdout.take().map_or(
+                        Vec::new(),
+                        |mut p| {
                             use std::io::Read;
                             let mut buf = Vec::new();
                             let _ = p.read_to_end(&mut buf);
                             buf
-                        }),
-                    )
+                        },
+                    ))
                     .to_string();
-                    let stderr = String::from_utf8_lossy(
-                        &child.stderr.take().map_or(Vec::new(), |mut p| {
+                    let stderr = String::from_utf8_lossy(&child.stderr.take().map_or(
+                        Vec::new(),
+                        |mut p| {
                             use std::io::Read;
                             let mut buf = Vec::new();
                             let _ = p.read_to_end(&mut buf);
                             buf
-                        }),
-                    )
+                        },
+                    ))
                     .to_string();
 
-                    let code = status.code().map_or_else(|| "unknown".into(), |c| c.to_string());
+                    let code = status
+                        .code()
+                        .map_or_else(|| "unknown".into(), |c| c.to_string());
 
                     let mut result = format!(
                         "Exit code: {}\nElapsed: {:.2}s\n",

@@ -17,9 +17,7 @@ use crate::state::AppState;
 ///
 /// No authentication required.  The response tells the frontend whether
 /// token-based auth is active and whether an admin token has been set.
-pub async fn auth_status(
-    State(state): State<AppState>,
-) -> Json<Value> {
+pub async fn auth_status(State(state): State<AppState>) -> Json<Value> {
     let token_set = !state.get_admin_token().await.is_empty();
     Json(json!({
         "auth_enabled": state.is_auth_enabled(),

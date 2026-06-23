@@ -18,19 +18,31 @@ pub async fn health_check() -> Json<Value> {
 /// `GET /api/info` -- returns server version, status, counts (sessions,
 /// channels, workflows, tasks, tools), supported channels, and feature flags.
 pub async fn system_info(State(state): State<AppState>) -> Json<Value> {
-    let sessions_count = state.session_repo.list().await
+    let sessions_count = state
+        .session_repo
+        .list()
+        .await
         .map(|s| s.len())
         .unwrap_or(0);
 
-    let channels_count = state.channel_repo.list().await
+    let channels_count = state
+        .channel_repo
+        .list()
+        .await
         .map(|c| c.iter().filter(|ch| ch.enabled).count())
         .unwrap_or(0);
 
-    let workflows_count = state.workflow_repo.list().await
+    let workflows_count = state
+        .workflow_repo
+        .list()
+        .await
         .map(|w| w.len())
         .unwrap_or(0);
 
-    let tasks_count = state.task_repo.list().await
+    let tasks_count = state
+        .task_repo
+        .list()
+        .await
         .map(|t| t.iter().filter(|tk| tk.enabled).count())
         .unwrap_or(0);
 

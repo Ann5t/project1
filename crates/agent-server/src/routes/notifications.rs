@@ -18,15 +18,14 @@ use crate::state::AppState;
 /// email notifier is not configured, or 200 with the SMTP host/from info
 /// on success.
 pub async fn test_email(State(_state): State<AppState>) -> Result<Json<Value>, ApiError> {
-    let notifier = GLOBAL_EMAIL_NOTIFIER
-        .get()
-        .ok_or_else(|| {
-            ApiError::BadRequest(
-                "SMTP email notifier is not configured. \
+    let notifier = GLOBAL_EMAIL_NOTIFIER.get().ok_or_else(|| {
+        ApiError::BadRequest(
+            "SMTP email notifier is not configured. \
                  Set smtp_enabled=true and provide smtp_username, smtp_password, \
-                 smtp_from, and smtp_to in config.".into(),
-            )
-        })?;
+                 smtp_from, and smtp_to in config."
+                .into(),
+        )
+    })?;
 
     let subject = "AI Agent — Test Email";
     let body = format!(

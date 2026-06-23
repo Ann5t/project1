@@ -6,7 +6,9 @@ use uuid::Uuid;
 
 use futures::stream::StreamExt;
 
-use super::types::{StepResult, StepStatus, StepType, WorkflowDefinition, WorkflowResult, WorkflowStep};
+use super::types::{
+    StepResult, StepStatus, StepType, WorkflowDefinition, WorkflowResult, WorkflowStep,
+};
 use crate::error::CoreError;
 use crate::llm::client::LlmClient;
 use crate::tool::registry::ToolRegistry;
@@ -26,7 +28,10 @@ use crate::tool::registry::ToolRegistry;
 /// See [`WorkflowEngine::execute`] for the entry point.
 pub struct WorkflowEngine {
     llm: Arc<dyn LlmClient>,
-    #[expect(dead_code, reason = "Reserved for future ToolCall step implementation (Phase 9)")]
+    #[expect(
+        dead_code,
+        reason = "Reserved for future ToolCall step implementation (Phase 9)"
+    )]
     tools: Arc<ToolRegistry>,
 }
 
@@ -136,11 +141,9 @@ impl WorkflowEngine {
         while !queue.is_empty() {
             // Execute all currently available steps (same level = parallel)
             let current_batch: Vec<String> = queue.drain(..).collect();
-            let batch_results = self.execute_batch(
-                definition,
-                &current_batch,
-                &results,
-            ).await;
+            let batch_results = self
+                .execute_batch(definition, &current_batch, &results)
+                .await;
 
             // Process results
             for result in batch_results {
@@ -154,12 +157,15 @@ impl WorkflowEngine {
                     // Mark downstream as skipped
                     if let Some(downstream) = adjacency.get(&step_id) {
                         for target in downstream {
-                            results.insert(target.clone(), StepResult {
-                                step_id: target.clone(),
-                                status: StepStatus::Skipped,
-                                output: None,
-                                error: Some("Upstream step failed".into()),
-                            });
+                            results.insert(
+                                target.clone(),
+                                StepResult {
+                                    step_id: target.clone(),
+                                    status: StepStatus::Skipped,
+                                    output: None,
+                                    error: Some("Upstream step failed".into()),
+                                },
+                            );
                         }
                     }
                     continue;
@@ -211,8 +217,11 @@ impl WorkflowEngine {
     ) -> Vec<StepResult> {
         let llm = Arc::clone(&self.llm);
 
-        let step_map: HashMap<&str, &WorkflowStep> =
-            definition.steps.iter().map(|s| (s.id.as_str(), s)).collect();
+        let step_map: HashMap<&str, &WorkflowStep> = definition
+            .steps
+            .iter()
+            .map(|s| (s.id.as_str(), s))
+            .collect();
 
         // Build a stream of futures, one per step.
         let futures = step_ids.iter().map(|step_id| {
@@ -336,8 +345,8 @@ async fn execute_single_step(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::workflow::types::WorkflowEdge;
     use crate::llm::types::*;
+    use crate::workflow::types::WorkflowEdge;
     use async_trait::async_trait;
     use std::sync::Arc;
 
@@ -421,7 +430,11 @@ mod tests {
         }
     }
 
-    fn make_definition(name: &str, steps: Vec<WorkflowStep>, edges: Vec<WorkflowEdge>) -> WorkflowDefinition {
+    fn make_definition(
+        name: &str,
+        steps: Vec<WorkflowStep>,
+        edges: Vec<WorkflowEdge>,
+    ) -> WorkflowDefinition {
         WorkflowDefinition {
             name: name.into(),
             description: String::new(),
@@ -430,7 +443,12 @@ mod tests {
         }
     }
 
-    fn make_step(id: &str, name: &str, step_type: StepType, config: serde_json::Value) -> WorkflowStep {
+    fn make_step(
+        id: &str,
+        name: &str,
+        step_type: StepType,
+        config: serde_json::Value,
+    ) -> WorkflowStep {
         WorkflowStep {
             id: id.into(),
             name: name.into(),
@@ -473,7 +491,11 @@ mod tests {
         assert_eq!(result.status, StepStatus::Success);
         assert_eq!(result.steps.len(), 1);
         assert_eq!(result.steps[0].status, StepStatus::Success);
-        assert!(result.steps[0].output.as_ref().unwrap().contains("1 seconds"));
+        assert!(result.steps[0]
+            .output
+            .as_ref()
+            .unwrap()
+            .contains("1 seconds"));
     }
 
     #[tokio::test]
@@ -484,22 +506,29 @@ mod tests {
 
         let def = make_definition(
             "delay-default",
-            vec![make_step("s1", "Wait", StepType::Delay, serde_json::json!({}))],
+            vec![make_step(
+                "s1",
+                "Wait",
+                StepType::Delay,
+                serde_json::json!({}),
+            )],
             vec![],
         );
 
         let result = engine.execute("wf-2", &def).await.unwrap();
         assert_eq!(result.status, StepStatus::Success);
-        assert!(result.steps[0].output.as_ref().unwrap().contains("5 seconds"));
+        assert!(result.steps[0]
+            .output
+            .as_ref()
+            .unwrap()
+            .contains("5 seconds"));
     }
 
     // ── LLM step tests ──
 
     #[tokio::test]
     async fn single_llm_step_success() {
-        let llm = Arc::new(
-            MockLlmClient::new().with_response("Summarize this", "Summary: Done.")
-        );
+        let llm = Arc::new(MockLlmClient::new().with_response("Summarize this", "Summary: Done."));
         let tools = Arc::new(ToolRegistry::new());
         let engine = WorkflowEngine::new(llm, tools);
 
@@ -523,9 +552,7 @@ mod tests {
 
     #[tokio::test]
     async fn llm_step_error_propagates() {
-        let llm = Arc::new(
-            MockLlmClient::new().with_error("Bad prompt", "Mock API error")
-        );
+        let llm = Arc::new(MockLlmClient::new().with_error("Bad prompt", "Mock API error"));
         let tools = Arc::new(ToolRegistry::new());
         let engine = WorkflowEngine::new(llm, tools);
 
@@ -543,7 +570,11 @@ mod tests {
         let result = engine.execute("wf-4", &def).await.unwrap();
         assert_eq!(result.status, StepStatus::Error);
         assert_eq!(result.steps[0].status, StepStatus::Error);
-        assert!(result.steps[0].error.as_ref().unwrap().contains("Mock API error"));
+        assert!(result.steps[0]
+            .error
+            .as_ref()
+            .unwrap()
+            .contains("Mock API error"));
     }
 
     // ── DAG Execution Tests ──
@@ -557,8 +588,18 @@ mod tests {
         let def = make_definition(
             "linear-dag",
             vec![
-                make_step("s1", "First", StepType::Delay, serde_json::json!({"seconds": 0})),
-                make_step("s2", "Second", StepType::Delay, serde_json::json!({"seconds": 0})),
+                make_step(
+                    "s1",
+                    "First",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
+                make_step(
+                    "s2",
+                    "Second",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
             ],
             vec![make_edge("e1", "s1", "s2")],
         );
@@ -567,7 +608,12 @@ mod tests {
         assert_eq!(result.status, StepStatus::Success);
         assert_eq!(result.steps.len(), 2);
         for step in &result.steps {
-            assert_eq!(step.status, StepStatus::Success, "Step {} failed", step.step_id);
+            assert_eq!(
+                step.status,
+                StepStatus::Success,
+                "Step {} failed",
+                step.step_id
+            );
         }
     }
 
@@ -580,14 +626,26 @@ mod tests {
         let def = make_definition(
             "parallel-dag",
             vec![
-                make_step("s1", "Start", StepType::Delay, serde_json::json!({"seconds": 0})),
-                make_step("s2", "Branch A", StepType::Delay, serde_json::json!({"seconds": 0})),
-                make_step("s3", "Branch B", StepType::Delay, serde_json::json!({"seconds": 0})),
+                make_step(
+                    "s1",
+                    "Start",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
+                make_step(
+                    "s2",
+                    "Branch A",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
+                make_step(
+                    "s3",
+                    "Branch B",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
             ],
-            vec![
-                make_edge("e1", "s1", "s2"),
-                make_edge("e2", "s1", "s3"),
-            ],
+            vec![make_edge("e1", "s1", "s2"), make_edge("e2", "s1", "s3")],
         );
 
         let result = engine.execute("wf-6", &def).await.unwrap();
@@ -608,10 +666,30 @@ mod tests {
         let def = make_definition(
             "diamond-dag",
             vec![
-                make_step("start", "Start", StepType::Delay, serde_json::json!({"seconds": 0})),
-                make_step("left", "Left", StepType::Delay, serde_json::json!({"seconds": 0})),
-                make_step("right", "Right", StepType::Delay, serde_json::json!({"seconds": 0})),
-                make_step("end", "End", StepType::Delay, serde_json::json!({"seconds": 0})),
+                make_step(
+                    "start",
+                    "Start",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
+                make_step(
+                    "left",
+                    "Left",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
+                make_step(
+                    "right",
+                    "Right",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
+                make_step(
+                    "end",
+                    "End",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
             ],
             vec![
                 make_edge("e1", "start", "left"),
@@ -637,17 +715,25 @@ mod tests {
 
     #[tokio::test]
     async fn failure_skips_downstream() {
-        let llm = Arc::new(
-            MockLlmClient::new().with_error("fail me", "Fail!")
-        );
+        let llm = Arc::new(MockLlmClient::new().with_error("fail me", "Fail!"));
         let tools = Arc::new(ToolRegistry::new());
         let engine = WorkflowEngine::new(llm, tools);
 
         let def = make_definition(
             "fail-dag",
             vec![
-                make_step("s1", "WillFail", StepType::LlmCall, serde_json::json!({"prompt": "fail me"})),
-                make_step("s2", "Skipped", StepType::Delay, serde_json::json!({"seconds": 0})),
+                make_step(
+                    "s1",
+                    "WillFail",
+                    StepType::LlmCall,
+                    serde_json::json!({"prompt": "fail me"}),
+                ),
+                make_step(
+                    "s2",
+                    "Skipped",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
             ],
             vec![make_edge("e1", "s1", "s2")],
         );
@@ -673,13 +759,22 @@ mod tests {
 
         let def = make_definition(
             "publish-test",
-            vec![make_step("s1", "Publish", StepType::Publish, serde_json::json!({}))],
+            vec![make_step(
+                "s1",
+                "Publish",
+                StepType::Publish,
+                serde_json::json!({}),
+            )],
             vec![],
         );
 
         let result = engine.execute("wf-9", &def).await.unwrap();
         assert_eq!(result.status, StepStatus::Success);
-        assert!(result.steps[0].output.as_ref().unwrap().contains("placeholder"));
+        assert!(result.steps[0]
+            .output
+            .as_ref()
+            .unwrap()
+            .contains("placeholder"));
     }
 
     #[tokio::test]
@@ -690,13 +785,22 @@ mod tests {
 
         let def = make_definition(
             "condition-test",
-            vec![make_step("s1", "If", StepType::Condition, serde_json::json!({}))],
+            vec![make_step(
+                "s1",
+                "If",
+                StepType::Condition,
+                serde_json::json!({}),
+            )],
             vec![],
         );
 
         let result = engine.execute("wf-10", &def).await.unwrap();
         assert_eq!(result.status, StepStatus::Success);
-        assert!(result.steps[0].output.as_ref().unwrap().contains("placeholder"));
+        assert!(result.steps[0]
+            .output
+            .as_ref()
+            .unwrap()
+            .contains("placeholder"));
     }
 
     #[tokio::test]
@@ -707,13 +811,22 @@ mod tests {
 
         let def = make_definition(
             "tool-call-test",
-            vec![make_step("s1", "Tool", StepType::ToolCall, serde_json::json!({}))],
+            vec![make_step(
+                "s1",
+                "Tool",
+                StepType::ToolCall,
+                serde_json::json!({}),
+            )],
             vec![],
         );
 
         let result = engine.execute("wf-11", &def).await.unwrap();
         assert_eq!(result.status, StepStatus::Success);
-        assert!(result.steps[0].output.as_ref().unwrap().contains("placeholder"));
+        assert!(result.steps[0]
+            .output
+            .as_ref()
+            .unwrap()
+            .contains("placeholder"));
     }
 
     // ── Edge Cases ──
@@ -799,12 +912,13 @@ mod tests {
         // A -> A (self loop)
         let def = make_definition(
             "self-loop",
-            vec![
-                make_step("s1", "Step", StepType::Delay, serde_json::json!({"seconds": 0})),
-            ],
-            vec![
-                make_edge("e1", "s1", "s1"),
-            ],
+            vec![make_step(
+                "s1",
+                "Step",
+                StepType::Delay,
+                serde_json::json!({"seconds": 0}),
+            )],
+            vec![make_edge("e1", "s1", "s1")],
         );
 
         let result = engine.execute("wf-self-loop", &def).await;
@@ -828,12 +942,13 @@ mod tests {
         // Edge references a step that doesn't exist in steps list
         let def = make_definition(
             "missing-step",
-            vec![
-                make_step("s1", "Real Step", StepType::Delay, serde_json::json!({"seconds": 0})),
-            ],
-            vec![
-                make_edge("e1", "s1", "nonexistent_target"),
-            ],
+            vec![make_step(
+                "s1",
+                "Real Step",
+                StepType::Delay,
+                serde_json::json!({"seconds": 0}),
+            )],
+            vec![make_edge("e1", "s1", "nonexistent_target")],
         );
 
         let result = engine.execute("wf-missing", &def).await;
@@ -855,12 +970,13 @@ mod tests {
         // Edge source references a step that doesn't exist
         let def = make_definition(
             "missing-source",
-            vec![
-                make_step("s1", "Real Step", StepType::Delay, serde_json::json!({"seconds": 0})),
-            ],
-            vec![
-                make_edge("e1", "nonexistent_source", "s1"),
-            ],
+            vec![make_step(
+                "s1",
+                "Real Step",
+                StepType::Delay,
+                serde_json::json!({"seconds": 0}),
+            )],
+            vec![make_edge("e1", "nonexistent_source", "s1")],
         );
 
         let result = engine.execute("wf-missing-src", &def).await;
@@ -885,10 +1001,30 @@ mod tests {
         let def = make_definition(
             "three-stage",
             vec![
-                make_step("fetch", "Fetch Data", StepType::Delay, serde_json::json!({"seconds": 0})),
-                make_step("process_a", "Process A", StepType::Delay, serde_json::json!({"seconds": 0})),
-                make_step("process_b", "Process B", StepType::Delay, serde_json::json!({"seconds": 0})),
-                make_step("merge", "Merge Results", StepType::Delay, serde_json::json!({"seconds": 0})),
+                make_step(
+                    "fetch",
+                    "Fetch Data",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
+                make_step(
+                    "process_a",
+                    "Process A",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
+                make_step(
+                    "process_b",
+                    "Process B",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
+                make_step(
+                    "merge",
+                    "Merge Results",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
             ],
             vec![
                 make_edge("e1", "fetch", "process_a"),
@@ -922,10 +1058,30 @@ mod tests {
         let def = make_definition(
             "parallel-chains",
             vec![
-                make_step("chain1_a", "Chain1 Start", StepType::Delay, serde_json::json!({"seconds": 0})),
-                make_step("chain1_b", "Chain1 End", StepType::Delay, serde_json::json!({"seconds": 0})),
-                make_step("chain2_a", "Chain2 Start", StepType::Delay, serde_json::json!({"seconds": 0})),
-                make_step("chain2_b", "Chain2 End", StepType::Delay, serde_json::json!({"seconds": 0})),
+                make_step(
+                    "chain1_a",
+                    "Chain1 Start",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
+                make_step(
+                    "chain1_b",
+                    "Chain1 End",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
+                make_step(
+                    "chain2_a",
+                    "Chain2 Start",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
+                make_step(
+                    "chain2_b",
+                    "Chain2 End",
+                    StepType::Delay,
+                    serde_json::json!({"seconds": 0}),
+                ),
             ],
             vec![
                 make_edge("e1", "chain1_a", "chain1_b"),

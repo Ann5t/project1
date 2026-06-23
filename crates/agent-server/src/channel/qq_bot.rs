@@ -21,8 +21,8 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
-use futures::stream::StreamExt;
 use futures::sink::SinkExt;
+use futures::stream::StreamExt;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time;
@@ -223,10 +223,7 @@ impl QqBotChannel {
             .ok_or_else(|| format!("No access_token in QQ response: {}", body))?;
 
         // QQ tokens typically last 7200 seconds (2 hours); cache with 300s margin
-        let expires_in = body["expires_in"]
-            .as_i64()
-            .unwrap_or(7200)
-            .max(300) as u64;
+        let expires_in = body["expires_in"].as_i64().unwrap_or(7200).max(300) as u64;
 
         let mut cache = self.token_cache.write().await;
         *cache = Some((
@@ -285,11 +282,7 @@ impl QqBotChannel {
     /// Send a text message to a user via the QQ HTTP API.
     ///
     /// Endpoint: `POST https://api.sgroup.qq.com/v2/users/{openid}/messages`
-    pub async fn send_text_message(
-        &self,
-        openid: &str,
-        content: &str,
-    ) -> Result<(), String> {
+    pub async fn send_text_message(&self, openid: &str, content: &str) -> Result<(), String> {
         let token = self.get_access_token().await?;
 
         let body = serde_json::json!({
@@ -432,10 +425,7 @@ impl QqBotChannel {
         let mut i = 0;
         while i < chars.len() {
             // Check for <@...> or <@!...> pattern
-            if chars[i] == '<'
-                && i + 1 < chars.len()
-                && chars[i + 1] == '@'
-            {
+            if chars[i] == '<' && i + 1 < chars.len() && chars[i + 1] == '@' {
                 // Skip the opening "<@"
                 let mut j = i + 2;
                 // Optionally skip '!' after '@'
@@ -456,10 +446,7 @@ impl QqBotChannel {
             i += 1;
         }
         // Also collapse multiple spaces left by stripped mentions
-        let collapsed = result
-            .split_whitespace()
-            .collect::<Vec<_>>()
-            .join(" ");
+        let collapsed = result.split_whitespace().collect::<Vec<_>>().join(" ");
         collapsed
     }
 
@@ -573,16 +560,9 @@ impl QqBotChannel {
         }
 
         // Check if this was an @message to make the response more targeted
-        let is_at = matches!(
-            event_type,
-            "AT_MESSAGE_CREATE" | "GROUP_AT_MESSAGE_CREATE"
-        );
+        let is_at = matches!(event_type, "AT_MESSAGE_CREATE" | "GROUP_AT_MESSAGE_CREATE");
 
-        let descriptive_type = if is_at {
-            "qq_group"
-        } else {
-            "qq"
-        };
+        let descriptive_type = if is_at { "qq_group" } else { "qq" };
 
         let channel_msg = ChannelMessage {
             channel_type: descriptive_type.to_string(),
@@ -634,19 +614,13 @@ impl QqBotChannel {
                     }
                     Err(e) => {
                         error!("QQ Bot WebSocket error: {}", e);
-                        warn!(
-                            "QQ Bot WebSocket: reconnecting in {:?}...",
-                            reconnect_delay
-                        );
+                        warn!("QQ Bot WebSocket: reconnecting in {:?}...", reconnect_delay);
                     }
                 }
 
                 // Exponential backoff with jitter
                 time::sleep(reconnect_delay).await;
-                reconnect_delay = std::cmp::min(
-                    reconnect_delay * 2,
-                    MAX_RECONNECT_DELAY,
-                );
+                reconnect_delay = std::cmp::min(reconnect_delay * 2, MAX_RECONNECT_DELAY);
 
                 // Reset sequence on reconnect (simplified -- full resume not implemented)
                 *slf.last_sequence.lock().await = None;
@@ -900,11 +874,7 @@ impl Channel for QqBotChannel {
     /// In production this validates the Ed25519 signature using the bot_secret.
     async fn verify(&self, params: VerifyParams) -> Result<bool, String> {
         // Check for Ed25519 signature
-        if let Some(sig) = params
-            .params
-            .get("signature")
-            .and_then(|s| s.as_str())
-        {
+        if let Some(sig) = params.params.get("signature").and_then(|s| s.as_str()) {
             if sig.is_empty() {
                 return Ok(false);
             }
@@ -1002,8 +972,7 @@ mod tests {
             "group_openid": "group_abc",
             "timestamp": "2024-01-01T00:00:00Z"
         });
-        let msg =
-            QqBotChannel::parse_dispatch_to_message("AT_MESSAGE_CREATE", &data).unwrap();
+        let msg = QqBotChannel::parse_dispatch_to_message("AT_MESSAGE_CREATE", &data).unwrap();
         assert_eq!(msg.channel_type, "qq_group");
         assert_eq!(msg.user_id, "user_123");
         assert_eq!(msg.chat_id, "group_abc");
@@ -1018,8 +987,7 @@ mod tests {
             "content": "direct message text",
             "timestamp": "2024-01-01T00:00:00Z"
         });
-        let msg =
-            QqBotChannel::parse_dispatch_to_message("C2C_MESSAGE_CREATE", &data).unwrap();
+        let msg = QqBotChannel::parse_dispatch_to_message("C2C_MESSAGE_CREATE", &data).unwrap();
         assert_eq!(msg.channel_type, "qq");
         assert_eq!(msg.user_id, "user_456");
         assert_eq!(msg.content, "direct message text");
@@ -1035,8 +1003,7 @@ mod tests {
                 {"url": "https://example.com/photo.jpg", "content_type": "image/jpeg"}
             ]
         });
-        let msg =
-            QqBotChannel::parse_dispatch_to_message("C2C_MESSAGE_CREATE", &data).unwrap();
+        let msg = QqBotChannel::parse_dispatch_to_message("C2C_MESSAGE_CREATE", &data).unwrap();
         assert!(msg.content.contains("Image received"));
     }
 
@@ -1047,8 +1014,7 @@ mod tests {
             "author": {"id": "empty_user"},
             "content": ""
         });
-        let msg =
-            QqBotChannel::parse_dispatch_to_message("MESSAGE_CREATE", &data);
+        let msg = QqBotChannel::parse_dispatch_to_message("MESSAGE_CREATE", &data);
         assert!(msg.is_none());
     }
 

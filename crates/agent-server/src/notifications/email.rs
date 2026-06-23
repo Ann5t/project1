@@ -145,11 +145,7 @@ impl EmailNotifier {
     /// Send an HTML notification email to all addresses in `smtp_to`.
     ///
     /// If `smtp_to` is empty the method silently succeeds (no-op).
-    pub async fn send_notification(
-        &self,
-        subject: &str,
-        body_html: &str,
-    ) -> anyhow::Result<()> {
+    pub async fn send_notification(&self, subject: &str, body_html: &str) -> anyhow::Result<()> {
         let to_str = self
             .config_repo
             .get("smtp_to")
@@ -163,10 +159,7 @@ impl EmailNotifier {
             return Ok(());
         }
 
-        let from_mbox: Mailbox = self
-            .from
-            .parse()
-            .context("Invalid smtp_from address")?;
+        let from_mbox: Mailbox = self.from.parse().context("Invalid smtp_from address")?;
 
         let to_mboxes: Vec<Mailbox> = to_str
             .split(',')
@@ -186,9 +179,7 @@ impl EmailNotifier {
         let plain = strip_html(body_html);
 
         // Build message: multipart/alternative (plain + HTML).
-        let mut builder = Message::builder()
-            .from(from_mbox)
-            .subject(subject);
+        let mut builder = Message::builder().from(from_mbox).subject(subject);
 
         for to in &to_mboxes {
             builder = builder.to(to.clone());
@@ -222,12 +213,7 @@ impl EmailNotifier {
     ///
     /// The email is only sent when `notify_on_workflow_complete` is `true`
     /// in the database config.
-    pub async fn notify_workflow_complete(
-        &self,
-        name: &str,
-        status: &str,
-        result_url: &str,
-    ) {
+    pub async fn notify_workflow_complete(&self, name: &str, status: &str, result_url: &str) {
         if !self.should_notify("notify_on_workflow_complete").await {
             return;
         }
@@ -271,12 +257,7 @@ impl EmailNotifier {
     ///
     /// The email is only sent when `notify_on_task_complete` is `true`
     /// in the database config.
-    pub async fn notify_task_complete(
-        &self,
-        name: &str,
-        status: &str,
-        output: &str,
-    ) {
+    pub async fn notify_task_complete(&self, name: &str, status: &str, output: &str) {
         if !self.should_notify("notify_on_task_complete").await {
             return;
         }

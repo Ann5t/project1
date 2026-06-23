@@ -15,16 +15,16 @@
 //! | [`WorkflowRepo`] | `workflows` | Workflow definitions and run history |
 //! | [`TaskRepo`] | `scheduled_tasks` | Cron-scheduled tasks and execution logs |
 
-pub mod config_repo;
-pub mod session_repo;
-pub mod message_repo;
 pub mod channel_repo;
-pub mod workflow_repo;
+pub mod config_repo;
+pub mod message_repo;
+pub mod session_repo;
 pub mod task_repo;
+pub mod workflow_repo;
 
-pub use config_repo::ConfigRepo;
-pub use session_repo::SessionRepo;
-pub use message_repo::MessageRepo;
 pub use channel_repo::ChannelRepo;
-pub use workflow_repo::WorkflowRepo;
+pub use config_repo::ConfigRepo;
+pub use message_repo::MessageRepo;
+pub use session_repo::SessionRepo;
 pub use task_repo::TaskRepo;
+pub use workflow_repo::WorkflowRepo;

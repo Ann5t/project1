@@ -19,8 +19,8 @@
 
 pub mod auth;
 pub mod backup;
-pub mod chat;
 pub mod channel;
+pub mod chat;
 pub mod config_api;
 pub mod export;
 pub mod health;

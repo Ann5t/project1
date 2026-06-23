@@ -99,11 +99,14 @@ pub async fn send_message(
     info!("Processing message for session {}", session_id);
 
     // Broadcast message_received event
-    state.broadcast_event("message_received", json!({
-        "session_id": session_id,
-        "role": "user",
-        "content_preview": &body.message[..body.message.len().min(200)],
-    }));
+    state.broadcast_event(
+        "message_received",
+        json!({
+            "session_id": session_id,
+            "role": "user",
+            "content_preview": &body.message[..body.message.len().min(200)],
+        }),
+    );
 
     let response = state
         .session_manager
@@ -111,11 +114,14 @@ pub async fn send_message(
         .await?;
 
     // Broadcast message_sent event
-    state.broadcast_event("message_sent", json!({
-        "session_id": session_id,
-        "role": "assistant",
-        "content_preview": &response[..response.len().min(200)],
-    }));
+    state.broadcast_event(
+        "message_sent",
+        json!({
+            "session_id": session_id,
+            "role": "assistant",
+            "content_preview": &response[..response.len().min(200)],
+        }),
+    );
 
     Ok(Json(json!({
         "session_id": session_id,
@@ -174,20 +180,17 @@ pub async fn stream_message(
 
     info!("Streaming message for session {}", session_id);
 
-    let event_stream = state
-        .session_manager
-        .process_message_stream(&session_id, &body.message, body.model.as_deref());
+    let event_stream = state.session_manager.process_message_stream(
+        &session_id,
+        &body.message,
+        body.model.as_deref(),
+    );
 
     let sse_stream = event_stream.map(|result| {
         let event = match result {
-            Ok(value) => {
-                SseEvent::default().data(value.to_string())
-            }
-            Err(e) => {
-                SseEvent::default().data(
-                    json!({"type": "error", "message": e.to_string()}).to_string(),
-                )
-            }
+            Ok(value) => SseEvent::default().data(value.to_string()),
+            Err(e) => SseEvent::default()
+                .data(json!({"type": "error", "message": e.to_string()}).to_string()),
         };
         Ok(event)
     });

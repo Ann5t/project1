@@ -122,11 +122,7 @@ impl TaskRepo {
         Ok(())
     }
 
-    pub async fn list_logs(
-        &self,
-        task_id: &str,
-        limit: i64,
-    ) -> Result<Vec<TaskLogRow>, DbError> {
+    pub async fn list_logs(&self, task_id: &str, limit: i64) -> Result<Vec<TaskLogRow>, DbError> {
         let rows = sqlx::query_as::<_, TaskLogRow>(
             "SELECT * FROM task_logs WHERE task_id = ? ORDER BY started_at DESC LIMIT ?",
         )

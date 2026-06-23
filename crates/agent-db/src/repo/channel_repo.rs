@@ -20,11 +20,10 @@ impl ChannelRepo {
     }
 
     pub async fn list(&self) -> Result<Vec<ChannelRow>, DbError> {
-        let rows = sqlx::query_as::<_, ChannelRow>(
-            "SELECT * FROM channels ORDER BY created_at DESC",
-        )
-        .fetch_all(&self.pool)
-        .await?;
+        let rows =
+            sqlx::query_as::<_, ChannelRow>("SELECT * FROM channels ORDER BY created_at DESC")
+                .fetch_all(&self.pool)
+                .await?;
         Ok(rows)
     }
 

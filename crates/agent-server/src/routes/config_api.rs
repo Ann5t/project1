@@ -34,7 +34,10 @@ pub async fn get_one(
     let value = state.config_repo.get(&key).await?;
     match value {
         Some(v) => Ok(Json(json!({ "key": key, "value": v }))),
-        None => Err(ApiError::NotFound(format!("Config key '{}' not found", key))),
+        None => Err(ApiError::NotFound(format!(
+            "Config key '{}' not found",
+            key
+        ))),
     }
 }
 

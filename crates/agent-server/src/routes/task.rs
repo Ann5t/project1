@@ -94,12 +94,24 @@ pub async fn update(
         .await?
         .ok_or_else(|| ApiError::NotFound(format!("Task '{}' not found", id)))?;
 
-    if let Some(name) = body.name { task.name = name; }
-    if let Some(ce) = body.cron_expression { task.cron_expression = ce; }
-    if let Some(prompt) = body.prompt { task.prompt = prompt; }
-    if let Some(sid) = body.session_id { task.session_id = Some(sid); }
-    if let Some(model) = body.model { task.model = model; }
-    if let Some(enabled) = body.enabled { task.enabled = enabled; }
+    if let Some(name) = body.name {
+        task.name = name;
+    }
+    if let Some(ce) = body.cron_expression {
+        task.cron_expression = ce;
+    }
+    if let Some(prompt) = body.prompt {
+        task.prompt = prompt;
+    }
+    if let Some(sid) = body.session_id {
+        task.session_id = Some(sid);
+    }
+    if let Some(model) = body.model {
+        task.model = model;
+    }
+    if let Some(enabled) = body.enabled {
+        task.enabled = enabled;
+    }
 
     state.task_repo.update(&task).await?;
     Ok(Json(json!(task)))
@@ -131,11 +143,14 @@ pub async fn run_now(
         .execute_task(&task.id, &task.prompt, &task.model)?;
 
     // Broadcast task_executed event
-    state.broadcast_event("task_executed", json!({
-        "task_id": id,
-        "name": task.name,
-        "result_preview": &result[..result.len().min(200)],
-    }));
+    state.broadcast_event(
+        "task_executed",
+        json!({
+            "task_id": id,
+            "name": task.name,
+            "result_preview": &result[..result.len().min(200)],
+        }),
+    );
 
     // Email notification
     if let Some(ref notifier) = state.email_notifier {

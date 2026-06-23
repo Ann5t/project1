@@ -376,7 +376,11 @@ impl CardBuilder {
                     text_buf.clear();
                 }
                 in_code = true;
-                code_lang = line.trim_start().trim_start_matches("```").trim().to_string();
+                code_lang = line
+                    .trim_start()
+                    .trim_start_matches("```")
+                    .trim()
+                    .to_string();
                 code_buf.clear();
             } else if in_code && line.trim() == "```" {
                 // End code fence
@@ -683,10 +687,7 @@ impl FeishuChannel {
             .map(String::from)
             .ok_or_else(|| format!("No access token in response: {}", body))?;
 
-        let expire_secs = body["expire"]
-            .as_i64()
-            .unwrap_or(7200)
-            .max(300) as u64; // at least 5 minutes
+        let expire_secs = body["expire"].as_i64().unwrap_or(7200).max(300) as u64; // at least 5 minutes
 
         // Cache with 5-min safety margin
         let mut cache = self.token_cache.write().await;
@@ -774,11 +775,7 @@ impl FeishuChannel {
     }
 
     /// Reply to a specific message in a chat (threaded reply).
-    pub async fn reply_to_message(
-        &self,
-        message_id: &str,
-        content: &str,
-    ) -> Result<(), String> {
+    pub async fn reply_to_message(&self, message_id: &str, content: &str) -> Result<(), String> {
         let token = self.get_access_token().await?;
 
         let body = serde_json::json!({
@@ -887,7 +884,10 @@ impl FeishuChannel {
 
         // Create new session
         let session_id = uuid::Uuid::new_v4().to_string();
-        let session_name = format!("FeishuChat-{}", &chat_id.chars().take(8).collect::<String>());
+        let session_name = format!(
+            "FeishuChat-{}",
+            &chat_id.chars().take(8).collect::<String>()
+        );
 
         let session_row = agent_db::models::SessionRow {
             id: session_id.clone(),
@@ -946,15 +946,13 @@ impl Channel for FeishuChannel {
         // which handles session creation, rate limiting, and message delivery.
         // This trait method provides a simple fallback for direct callers.
         let response_content = match &self.session_manager {
-            Some(sm) => {
-                match sm.process_message("default", &text, None).await {
-                    Ok(resp) => resp,
-                    Err(e) => {
-                        warn!("AI processing via handle_message failed: {}", e);
-                        format!("Received: {}", text)
-                    }
+            Some(sm) => match sm.process_message("default", &text, None).await {
+                Ok(resp) => resp,
+                Err(e) => {
+                    warn!("AI processing via handle_message failed: {}", e);
+                    format!("Received: {}", text)
                 }
-            }
+            },
             None => {
                 format!("Received: {}", text)
             }
@@ -1020,7 +1018,6 @@ impl FeishuChannel {
 
         FeishuEvent::extract_text_content(&msg_event)
     }
-
 }
 
 // ── Tests ──
@@ -1177,7 +1174,9 @@ mod tests {
         };
         let result = event.parse_message_event();
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Missing `event.sender.sender_id`"));
+        assert!(result
+            .unwrap_err()
+            .contains("Missing `event.sender.sender_id`"));
     }
 
     #[test]
@@ -1208,7 +1207,11 @@ mod tests {
             event_type_v1: None,
         };
         let result = event.parse_message_event();
-        assert!(result.is_ok(), "Should parse valid message event: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Should parse valid message event: {:?}",
+            result.err()
+        );
         let msg = result.unwrap();
         assert_eq!(msg.message_id, "msg-001");
         assert_eq!(msg.chat_id, "chat-456");
@@ -1257,7 +1260,11 @@ mod tests {
             chat_id: "c1".into(),
             msg_type: "text".into(),
             content: r#"{"text":"Hello World"}"#.into(),
-            sender_id: FeishuSenderId { union_id: None, open_id: Some("ou".into()), user_id: None },
+            sender_id: FeishuSenderId {
+                union_id: None,
+                open_id: Some("ou".into()),
+                user_id: None,
+            },
             root_id: None,
             parent_id: None,
         };
@@ -1272,7 +1279,11 @@ mod tests {
             chat_id: "c2".into(),
             msg_type: "text".into(),
             content: r#"{"not_text":"something"}"#.into(),
-            sender_id: FeishuSenderId { union_id: None, open_id: Some("ou2".into()), user_id: None },
+            sender_id: FeishuSenderId {
+                union_id: None,
+                open_id: Some("ou2".into()),
+                user_id: None,
+            },
             root_id: None,
             parent_id: None,
         };
@@ -1288,7 +1299,11 @@ mod tests {
             chat_id: "c3".into(),
             msg_type: "image".into(),
             content: r#"{"image_key":"img_123"}"#.into(),
-            sender_id: FeishuSenderId { union_id: None, open_id: Some("ou3".into()), user_id: None },
+            sender_id: FeishuSenderId {
+                union_id: None,
+                open_id: Some("ou3".into()),
+                user_id: None,
+            },
             root_id: None,
             parent_id: None,
         };
@@ -1310,8 +1325,13 @@ mod tests {
                         [{"tag": "text", "text": "Line two"}, {"tag": "text", "text": "More"}]
                     ]
                 }
-            }).to_string(),
-            sender_id: FeishuSenderId { union_id: None, open_id: Some("ou4".into()), user_id: None },
+            })
+            .to_string(),
+            sender_id: FeishuSenderId {
+                union_id: None,
+                open_id: Some("ou4".into()),
+                user_id: None,
+            },
             root_id: None,
             parent_id: None,
         };
@@ -1388,7 +1408,10 @@ mod tests {
         assert!(limiter.check("chat-r").await.is_ok());
         assert!(limiter.check("chat-r").await.is_err());
         limiter.reset("chat-r").await;
-        assert!(limiter.check("chat-r").await.is_ok(), "After reset, should allow again");
+        assert!(
+            limiter.check("chat-r").await.is_ok(),
+            "After reset, should allow again"
+        );
     }
 
     // ── Decryption edge cases ──

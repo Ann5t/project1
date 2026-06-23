@@ -7,8 +7,8 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::channel::feishu::{CardBuilder, FeishuChannel, FeishuConfig};
-use crate::channel::wechat_work::{WechatWorkChannel, WechatWorkConfig, WxMessage};
 use crate::channel::webhook::{WebhookChannel, WebhookConfig};
+use crate::channel::wechat_work::{WechatWorkChannel, WechatWorkConfig, WxMessage};
 use crate::error::ApiError;
 use crate::state::AppState;
 
@@ -126,11 +126,7 @@ pub async fn feishu_callback(
     }
 
     // ---- Step 2: Look up the Feishu channel configuration ----
-    let channel_row = state
-        .channel_repo
-        .get_by_type("feishu")
-        .await
-        ?;
+    let channel_row = state.channel_repo.get_by_type("feishu").await?;
 
     let channel_row = match channel_row {
         Some(c) => c,
@@ -148,8 +144,8 @@ pub async fn feishu_callback(
     let config: FeishuConfig = serde_json::from_str(&channel_row.config)
         .map_err(|e| ApiError::BadRequest(format!("Invalid Feishu config: {}", e)))?;
 
-    let feishu_channel = FeishuChannel::new(config)
-        .with_session_manager(state.session_manager.clone());
+    let feishu_channel =
+        FeishuChannel::new(config).with_session_manager(state.session_manager.clone());
 
     // ---- Step 3: Parse the event (with decryption if needed) ----
     let channel_msg = match feishu_channel.parse_callback(&body).await {
@@ -167,15 +163,22 @@ pub async fn feishu_callback(
     }
 
     // Broadcast channel message received event
-    state.broadcast_event("channel_message_received", json!({
-        "channel": "feishu",
-        "chat_id": channel_msg.chat_id,
-        "user_id": channel_msg.user_id,
-        "content_preview": &channel_msg.content[..channel_msg.content.len().min(200)],
-    }));
+    state.broadcast_event(
+        "channel_message_received",
+        json!({
+            "channel": "feishu",
+            "chat_id": channel_msg.chat_id,
+            "user_id": channel_msg.user_id,
+            "content_preview": &channel_msg.content[..channel_msg.content.len().min(200)],
+        }),
+    );
 
     // ---- Step 4: Rate limit check ----
-    if let Err(limit_err) = feishu_channel.rate_limiter.check(&channel_msg.chat_id).await {
+    if let Err(limit_err) = feishu_channel
+        .rate_limiter
+        .check(&channel_msg.chat_id)
+        .await
+    {
         tracing::warn!("Rate limit: {}", limit_err);
         // Send a warning message then bail
         let _ = feishu_channel
@@ -225,7 +228,8 @@ pub async fn feishu_callback(
         Ok(text) => text,
         Err(e) => {
             tracing::error!("AI processing error for session {}: {}", session_id, e);
-            crate::error::record_error(&format!("Feishu AI error (session {}): {}", session_id, e)).await;
+            crate::error::record_error(&format!("Feishu AI error (session {}): {}", session_id, e))
+                .await;
             let _ = feishu_channel
                 .send_message(
                     &channel_msg.chat_id,
@@ -299,11 +303,7 @@ pub async fn wechat_work_verify(
     }
 
     // Look up the WeChat Work channel configuration
-    let channel_row = state
-        .channel_repo
-        .get_by_type("wechat_work")
-        .await
-        ?;
+    let channel_row = state.channel_repo.get_by_type("wechat_work").await?;
 
     let channel_row = channel_row.ok_or_else(|| {
         ApiError::NotFound(
@@ -315,8 +315,7 @@ pub async fn wechat_work_verify(
     let config: WechatWorkConfig = serde_json::from_str(&channel_row.config)
         .map_err(|e| ApiError::BadRequest(format!("Invalid WeChat Work config: {}", e)))?;
 
-    let wx_channel =
-        WechatWorkChannel::new(config).map_err(ApiError::BadRequest)?;
+    let wx_channel = WechatWorkChannel::new(config).map_err(ApiError::BadRequest)?;
 
     let decrypted_echostr = wx_channel
         .verify_url(msg_signature, timestamp, nonce, echostr)
@@ -347,11 +346,7 @@ pub async fn wechat_work_callback(
     let nonce = params.get("nonce").map(|s| s.as_str()).unwrap_or("");
 
     // Look up the WeChat Work channel configuration
-    let channel_row = state
-        .channel_repo
-        .get_by_type("wechat_work")
-        .await
-        ?;
+    let channel_row = state.channel_repo.get_by_type("wechat_work").await?;
 
     let channel_row = match channel_row {
         Some(c) => c,
@@ -374,18 +369,14 @@ pub async fn wechat_work_callback(
         .with_session_manager(state.session_manager.clone());
 
     // Parse the callback: signature verify + XML parse + decrypt + message parse
-    let (_envelope, wx_msg) = match wx_channel.parse_callback(
-        &body,
-        msg_signature,
-        timestamp,
-        nonce,
-    ) {
-        Ok(result) => result,
-        Err(e) => {
-            tracing::error!("Failed to parse WeChat Work callback: {}", e);
-            return Ok("success".to_string());
-        }
-    };
+    let (_envelope, wx_msg) =
+        match wx_channel.parse_callback(&body, msg_signature, timestamp, nonce) {
+            Ok(result) => result,
+            Err(e) => {
+                tracing::error!("Failed to parse WeChat Work callback: {}", e);
+                return Ok("success".to_string());
+            }
+        };
 
     // Convert to normalized ChannelMessage
     let channel_msg = wx_channel.to_channel_message(&wx_msg);
@@ -400,12 +391,15 @@ pub async fn wechat_work_callback(
     state.increment_channel_msg("wechat_work").await;
 
     // Broadcast channel message received event
-    state.broadcast_event("channel_message_received", json!({
-        "channel": "wechat_work",
-        "chat_id": channel_msg.chat_id,
-        "user_id": channel_msg.user_id,
-        "content_preview": &channel_msg.content[..channel_msg.content.len().min(200)],
-    }));
+    state.broadcast_event(
+        "channel_message_received",
+        json!({
+            "channel": "wechat_work",
+            "chat_id": channel_msg.chat_id,
+            "user_id": channel_msg.user_id,
+            "content_preview": &channel_msg.content[..channel_msg.content.len().min(200)],
+        }),
+    );
 
     // Handle subscribe events with a welcome message
     if let WxMessage::Event(_) = &wx_msg {
@@ -424,25 +418,20 @@ pub async fn wechat_work_callback(
     // ---- AI Processing ----
 
     // Find or create a session for this chat
-    let session_id = match find_or_create_wx_session(
-        &state,
-        &channel_msg.chat_id,
-        &channel_msg.user_id,
-    )
-    .await
-    {
-        Ok(id) => id,
-        Err(e) => {
-            tracing::error!("Failed to find/create WeChat session: {}", e);
-            let _ = wx_channel
-                .send_text_message(
-                    &channel_msg.user_id,
-                    "Sorry, I had trouble setting up your session. Please try again.",
-                )
-                .await;
-            return Ok("success".to_string());
-        }
-    };
+    let session_id =
+        match find_or_create_wx_session(&state, &channel_msg.chat_id, &channel_msg.user_id).await {
+            Ok(id) => id,
+            Err(e) => {
+                tracing::error!("Failed to find/create WeChat session: {}", e);
+                let _ = wx_channel
+                    .send_text_message(
+                        &channel_msg.user_id,
+                        "Sorry, I had trouble setting up your session. Please try again.",
+                    )
+                    .await;
+                return Ok("success".to_string());
+            }
+        };
 
     // Process through AI
     let ai_result = state
@@ -492,7 +481,10 @@ pub async fn wechat_work_callback(
             } else {
                 chunk.to_string()
             };
-            if let Err(e) = wx_channel.send_text_message(&channel_msg.user_id, &label).await {
+            if let Err(e) = wx_channel
+                .send_text_message(&channel_msg.user_id, &label)
+                .await
+            {
                 tracing::error!("Failed to send WeChat Work response chunk {}: {}", i, e);
             }
         }
@@ -537,10 +529,7 @@ async fn find_or_create_wx_session(
 
     // Create new session
     let session_id = uuid::Uuid::new_v4().to_string();
-    let session_name = format!(
-        "WxWork-{}",
-        &chat_id.chars().take(8).collect::<String>()
-    );
+    let session_name = format!("WxWork-{}", &chat_id.chars().take(8).collect::<String>());
 
     let session_row = agent_db::models::SessionRow {
         id: session_id.clone(),
@@ -603,36 +592,27 @@ pub async fn webhook_callback(
     body: String,
 ) -> Result<Json<Value>, ApiError> {
     // ---- Step 1: Look up the webhook channel by webhook_url_path ----
-    let all_channels = state
-        .channel_repo
-        .list()
-        .await
-        ?;
+    let all_channels = state.channel_repo.list().await?;
 
     // Find the webhook channel whose webhook_url_path matches the path segment
     let channel_row = all_channels
         .iter()
         .find(|c| {
-            c.channel_type == "webhook"
-                && c.enabled
-                && {
-                    // Parse the channel config to extract webhook_url_path
-                    if let Ok(cfg) = serde_json::from_str::<WebhookConfig>(&c.config) {
-                        cfg.webhook_url_path == path
-                    } else {
-                        false
-                    }
+            c.channel_type == "webhook" && c.enabled && {
+                // Parse the channel config to extract webhook_url_path
+                if let Ok(cfg) = serde_json::from_str::<WebhookConfig>(&c.config) {
+                    cfg.webhook_url_path == path
+                } else {
+                    false
                 }
+            }
         })
         .cloned();
 
     let channel_row = match channel_row {
         Some(c) => c,
         None => {
-            tracing::warn!(
-                "No enabled webhook channel found for path '{}'",
-                path
-            );
+            tracing::warn!("No enabled webhook channel found for path '{}'", path);
             return Err(ApiError::NotFound(format!(
                 "No webhook configured for path '{}'",
                 path
@@ -641,12 +621,10 @@ pub async fn webhook_callback(
     };
 
     let config: WebhookConfig = serde_json::from_str(&channel_row.config)
-        .map_err(|e| {
-            ApiError::BadRequest(format!("Invalid webhook config: {}", e))
-        })?;
+        .map_err(|e| ApiError::BadRequest(format!("Invalid webhook config: {}", e)))?;
 
-    let webhook_channel = WebhookChannel::new(config.clone())
-        .with_session_manager(state.session_manager.clone());
+    let webhook_channel =
+        WebhookChannel::new(config.clone()).with_session_manager(state.session_manager.clone());
 
     // ---- Step 2: Verify HMAC signature (if secret is configured) ----
     let signature_header = headers
@@ -654,9 +632,7 @@ pub async fn webhook_callback(
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
 
-    if let Err(e) =
-        webhook_channel.verify_signature(body.as_bytes(), signature_header)
-    {
+    if let Err(e) = webhook_channel.verify_signature(body.as_bytes(), signature_header) {
         tracing::warn!(
             "Webhook '{}' signature verification failed: {}",
             config.webhook_url_path,
@@ -669,9 +645,8 @@ pub async fn webhook_callback(
     }
 
     // ---- Step 3: Parse the JSON body ----
-    let payload: Value = serde_json::from_str(&body).map_err(|e| {
-        ApiError::BadRequest(format!("Invalid JSON body: {}", e))
-    })?;
+    let payload: Value = serde_json::from_str(&body)
+        .map_err(|e| ApiError::BadRequest(format!("Invalid JSON body: {}", e)))?;
 
     // ---- Step 4: Extract the user message ----
     let message_text = webhook_channel.extract_message(&payload);
@@ -694,11 +669,14 @@ pub async fn webhook_callback(
     state.increment_channel_msg("webhook").await;
 
     // Broadcast event
-    state.broadcast_event("channel_message_received", json!({
-        "channel": "webhook",
-        "webhook_path": config.webhook_url_path,
-        "content_preview": &message_text[..message_text.len().min(200)],
-    }));
+    state.broadcast_event(
+        "channel_message_received",
+        json!({
+            "channel": "webhook",
+            "webhook_path": config.webhook_url_path,
+            "content_preview": &message_text[..message_text.len().min(200)],
+        }),
+    );
 
     // ---- Step 5: Find or create a session ----
     let chat_id = format!("webhook-{}", config.webhook_url_path);
@@ -709,10 +687,7 @@ pub async fn webhook_callback(
     {
         Ok(id) => id,
         Err(e) => {
-            tracing::error!(
-                "Failed to find/create webhook session: {}",
-                e
-            );
+            tracing::error!("Failed to find/create webhook session: {}", e);
             crate::error::record_error(&format!(
                 "Webhook session error ({}): {}",
                 config.webhook_url_path, e

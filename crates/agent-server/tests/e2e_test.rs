@@ -22,10 +22,10 @@ use agent_server::state::AppState;
 
 use axum::routing::{delete, get, post, put};
 use axum::Router;
+use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::trace::TraceLayer;
-use tower_http::compression::CompressionLayer;
 
 // ============================================================================
 // Mock LLM Client
@@ -81,26 +81,59 @@ fn build_test_router(state: AppState) -> Router {
     // Chat routes with their own rate-limiter layer omitted for tests
     let chat_routes = Router::new()
         .route("/api/chat", post(agent_server::routes::chat::send_message))
-        .route("/api/chat/stream", post(agent_server::routes::chat::stream_message));
+        .route(
+            "/api/chat/stream",
+            post(agent_server::routes::chat::stream_message),
+        );
 
     let api_routes = Router::new()
         // Health
-        .route("/api/health", get(agent_server::routes::health::health_check))
+        .route(
+            "/api/health",
+            get(agent_server::routes::health::health_check),
+        )
         .route("/api/info", get(agent_server::routes::health::system_info))
         // Auth
-        .route("/api/auth/status", get(agent_server::routes::auth::auth_status))
-        .route("/api/auth/login", post(agent_server::routes::auth::auth_login))
+        .route(
+            "/api/auth/status",
+            get(agent_server::routes::auth::auth_status),
+        )
+        .route(
+            "/api/auth/login",
+            post(agent_server::routes::auth::auth_login),
+        )
         // Config
-        .route("/api/config", get(agent_server::routes::config_api::get_all))
-        .route("/api/config", put(agent_server::routes::config_api::update_all))
-        .route("/api/config/{key}", get(agent_server::routes::config_api::get_one))
-        .route("/api/config/{key}", put(agent_server::routes::config_api::set_one))
+        .route(
+            "/api/config",
+            get(agent_server::routes::config_api::get_all),
+        )
+        .route(
+            "/api/config",
+            put(agent_server::routes::config_api::update_all),
+        )
+        .route(
+            "/api/config/{key}",
+            get(agent_server::routes::config_api::get_one),
+        )
+        .route(
+            "/api/config/{key}",
+            put(agent_server::routes::config_api::set_one),
+        )
         // Sessions
         .route("/api/sessions", get(agent_server::routes::session::list))
         .route("/api/sessions", post(agent_server::routes::session::create))
-        .route("/api/sessions/{id}", get(agent_server::routes::session::get_one))
-        .route("/api/sessions/{id}", put(agent_server::routes::session::update))
-        .route("/api/sessions/{id}", delete(agent_server::routes::session::delete))
+        .route(
+            "/api/sessions/{id}",
+            get(agent_server::routes::session::get_one),
+        )
+        .route(
+            "/api/sessions/{id}",
+            put(agent_server::routes::session::update),
+        )
+        .route(
+            "/api/sessions/{id}",
+            delete(agent_server::routes::session::delete),
+        )
         .route(
             "/api/sessions/{id}/messages",
             get(agent_server::routes::session::messages),
@@ -112,25 +145,61 @@ fn build_test_router(state: AppState) -> Router {
         // Channels
         .route("/api/channels", get(agent_server::routes::channel::list))
         .route("/api/channels", post(agent_server::routes::channel::create))
-        .route("/api/channels/{id}", put(agent_server::routes::channel::update))
-        .route("/api/channels/{id}", delete(agent_server::routes::channel::delete))
-        .route("/api/channels/{id}/test", post(agent_server::routes::channel::test))
+        .route(
+            "/api/channels/{id}",
+            put(agent_server::routes::channel::update),
+        )
+        .route(
+            "/api/channels/{id}",
+            delete(agent_server::routes::channel::delete),
+        )
+        .route(
+            "/api/channels/{id}/test",
+            post(agent_server::routes::channel::test),
+        )
         // Workflows
         .route("/api/workflows", get(agent_server::routes::workflow::list))
-        .route("/api/workflows", post(agent_server::routes::workflow::create))
-        .route("/api/workflows/{id}", get(agent_server::routes::workflow::get_one))
-        .route("/api/workflows/{id}", put(agent_server::routes::workflow::update))
-        .route("/api/workflows/{id}", delete(agent_server::routes::workflow::delete))
-        .route("/api/workflows/{id}/run", post(agent_server::routes::workflow::run))
-        .route("/api/workflows/{id}/runs", get(agent_server::routes::workflow::runs))
+        .route(
+            "/api/workflows",
+            post(agent_server::routes::workflow::create),
+        )
+        .route(
+            "/api/workflows/{id}",
+            get(agent_server::routes::workflow::get_one),
+        )
+        .route(
+            "/api/workflows/{id}",
+            put(agent_server::routes::workflow::update),
+        )
+        .route(
+            "/api/workflows/{id}",
+            delete(agent_server::routes::workflow::delete),
+        )
+        .route(
+            "/api/workflows/{id}/run",
+            post(agent_server::routes::workflow::run),
+        )
+        .route(
+            "/api/workflows/{id}/runs",
+            get(agent_server::routes::workflow::runs),
+        )
         // Tasks
         .route("/api/tasks", get(agent_server::routes::task::list))
         .route("/api/tasks", post(agent_server::routes::task::create))
         .route("/api/tasks/{id}", get(agent_server::routes::task::get_one))
         .route("/api/tasks/{id}", put(agent_server::routes::task::update))
-        .route("/api/tasks/{id}", delete(agent_server::routes::task::delete))
-        .route("/api/tasks/{id}/run", post(agent_server::routes::task::run_now))
-        .route("/api/tasks/{id}/logs", get(agent_server::routes::task::logs))
+        .route(
+            "/api/tasks/{id}",
+            delete(agent_server::routes::task::delete),
+        )
+        .route(
+            "/api/tasks/{id}/run",
+            post(agent_server::routes::task::run_now),
+        )
+        .route(
+            "/api/tasks/{id}/logs",
+            get(agent_server::routes::task::logs),
+        )
         // Monitor
         .route("/api/monitor", get(agent_server::routes::monitor::monitor))
         .route(
@@ -145,7 +214,10 @@ fn build_test_router(state: AppState) -> Router {
 
     Router::new()
         .merge(api_routes)
-        .route("/monitor", get(agent_server::routes::monitor::monitor_dashboard))
+        .route(
+            "/monitor",
+            get(agent_server::routes::monitor::monitor_dashboard),
+        )
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             agent_server::middleware::track_requests,
@@ -244,7 +316,11 @@ async fn test_complete_session_lifecycle() {
         .send()
         .await
         .unwrap();
-    assert_eq!(create_resp.status(), 200, "Create session should return 200");
+    assert_eq!(
+        create_resp.status(),
+        200,
+        "Create session should return 200"
+    );
     let created: serde_json::Value = create_resp.json().await.unwrap();
     let session_id = created["id"].as_str().unwrap().to_string();
     assert_eq!(created["name"], "E2E Lifecycle Session");
@@ -281,9 +357,15 @@ async fn test_complete_session_lifecycle() {
         msgs_arr.len()
     );
     // Verify roles
-    let roles: Vec<&str> = msgs_arr.iter().map(|m| m["role"].as_str().unwrap()).collect();
+    let roles: Vec<&str> = msgs_arr
+        .iter()
+        .map(|m| m["role"].as_str().unwrap())
+        .collect();
     assert!(roles.contains(&"user"), "Should contain a user message");
-    assert!(roles.contains(&"assistant"), "Should contain an assistant message");
+    assert!(
+        roles.contains(&"assistant"),
+        "Should contain an assistant message"
+    );
 
     // 4. Delete the session
     let del_resp = client
@@ -324,8 +406,14 @@ async fn test_config_crud_cycle() {
         .unwrap();
     assert_eq!(all_resp.status(), 200);
     let all: serde_json::Value = all_resp.json().await.unwrap();
-    assert!(all["default_model"].as_str().is_some(), "Seed config should exist");
-    assert!(all["theme"].as_str().is_some(), "Seed config should have theme");
+    assert!(
+        all["default_model"].as_str().is_some(),
+        "Seed config should exist"
+    );
+    assert!(
+        all["theme"].as_str().is_some(),
+        "Seed config should have theme"
+    );
 
     // 2. Update one config value
     let update_resp = client
@@ -397,7 +485,11 @@ async fn test_workflow_lifecycle() {
         .send()
         .await
         .unwrap();
-    assert_eq!(create_resp.status(), 200, "Create workflow should return 200");
+    assert_eq!(
+        create_resp.status(),
+        200,
+        "Create workflow should return 200"
+    );
     let created: serde_json::Value = create_resp.json().await.unwrap();
     let workflow_id = created["id"].as_str().unwrap().to_string();
     assert_eq!(created["name"], "E2E Workflow");
@@ -577,7 +669,11 @@ async fn test_channel_crud() {
         .send()
         .await
         .unwrap();
-    assert_eq!(create_resp.status(), 200, "Create channel should return 200");
+    assert_eq!(
+        create_resp.status(),
+        200,
+        "Create channel should return 200"
+    );
     let created: serde_json::Value = create_resp.json().await.unwrap();
     let channel_id = created["id"].as_str().unwrap().to_string();
     assert_eq!(created["channel_type"], "feishu");
@@ -776,7 +872,11 @@ async fn test_auth_flow() {
         .send()
         .await
         .unwrap();
-    assert_eq!(login_resp.status(), 200, "Login with valid token should succeed");
+    assert_eq!(
+        login_resp.status(),
+        200,
+        "Login with valid token should succeed"
+    );
     let login_body: serde_json::Value = login_resp.json().await.unwrap();
     assert_eq!(login_body["valid"], true);
 

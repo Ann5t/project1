@@ -36,7 +36,9 @@ pub async fn track_requests(
     let response = next.run(request).await;
 
     let status = response.status().as_u16();
-    state.increment_request_breakdown(&method, &path, status).await;
+    state
+        .increment_request_breakdown(&method, &path, status)
+        .await;
 
     response
 }
@@ -52,11 +54,7 @@ pub async fn track_requests(
 /// 1. `Authorization: Bearer <token>` header (preferred for REST calls)
 /// 2. `?token=<token>` query parameter (fallback, useful for WebSocket /
 ///    EventSource connections)
-pub async fn authenticate(
-    State(state): State<AppState>,
-    request: Request,
-    next: Next,
-) -> Response {
+pub async fn authenticate(State(state): State<AppState>, request: Request, next: Next) -> Response {
     // If auth is not enabled, skip entirely
     if !state.is_auth_enabled() {
         return next.run(request).await;
@@ -72,9 +70,7 @@ pub async fn authenticate(
     let admin_token = state.get_admin_token().await;
 
     match token {
-        Some(t) if t == admin_token => {
-            next.run(request).await
-        }
+        Some(t) if t == admin_token => next.run(request).await,
         _ => {
             let body = serde_json::json!({
                 "error": "Unauthorized — invalid or missing authentication token"
@@ -143,9 +139,8 @@ fn extract_token(request: &Request) -> Option<String> {
 /// caching reduces repeated downloads of unchanged assets.
 pub async fn static_cache_headers(request: Request, next: Next) -> Response {
     let path = request.uri().path();
-    let should_cache = path.starts_with("/css/")
-        || path.starts_with("/js/")
-        || path.starts_with("/assets/");
+    let should_cache =
+        path.starts_with("/css/") || path.starts_with("/js/") || path.starts_with("/assets/");
 
     let mut response = next.run(request).await;
 

@@ -71,13 +71,10 @@ impl ToolRegistry {
         name: &str,
         arguments: serde_json::Value,
     ) -> Result<ToolCallResult, CoreError> {
-        let tool = self
-            .get(name)
-            .await
-            .ok_or_else(|| CoreError::ToolError {
-                tool: name.to_string(),
-                message: "Tool not found".into(),
-            })?;
+        let tool = self.get(name).await.ok_or_else(|| CoreError::ToolError {
+            tool: name.to_string(),
+            message: "Tool not found".into(),
+        })?;
 
         debug!("Executing tool: {} with args: {}", name, arguments);
 

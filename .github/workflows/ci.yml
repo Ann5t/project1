@@ -25,6 +25,9 @@ jobs:
         with:
           components: clippy, rustfmt
 
+      - name: Install system dependencies (mold linker)
+        run: sudo apt-get update && sudo apt-get install -y mold
+
       - name: Cache cargo registry and target directory
         uses: Swatinem/rust-cache@v2
         with:

@@ -15,7 +15,9 @@ use agent_server::state::AppState;
 
 /// Helper to create a test AppState with an in-memory database
 async fn create_test_state() -> AppState {
-    let db = agent_db::init_db(":memory:").await.expect("Failed to init test DB");
+    let db = agent_db::init_db(":memory:")
+        .await
+        .expect("Failed to init test DB");
 
     let llm: Arc<dyn agent_core::llm::client::LlmClient + Send + Sync> =
         Arc::new(DeepSeekClient::new(
@@ -36,32 +38,74 @@ fn create_test_app(state: AppState) -> Router {
 
     Router::new()
         // Health
-        .route("/api/health", get(agent_server::routes::health::health_check))
+        .route(
+            "/api/health",
+            get(agent_server::routes::health::health_check),
+        )
         .route("/api/info", get(agent_server::routes::health::system_info))
         // Config
-        .route("/api/config", get(agent_server::routes::config_api::get_all))
-        .route("/api/config", put(agent_server::routes::config_api::update_all))
-        .route("/api/config/{key}", get(agent_server::routes::config_api::get_one))
-        .route("/api/config/{key}", put(agent_server::routes::config_api::set_one))
+        .route(
+            "/api/config",
+            get(agent_server::routes::config_api::get_all),
+        )
+        .route(
+            "/api/config",
+            put(agent_server::routes::config_api::update_all),
+        )
+        .route(
+            "/api/config/{key}",
+            get(agent_server::routes::config_api::get_one),
+        )
+        .route(
+            "/api/config/{key}",
+            put(agent_server::routes::config_api::set_one),
+        )
         // Sessions
         .route("/api/sessions", get(agent_server::routes::session::list))
         .route("/api/sessions", post(agent_server::routes::session::create))
-        .route("/api/sessions/{id}", get(agent_server::routes::session::get_one))
-        .route("/api/sessions/{id}", put(agent_server::routes::session::update))
-        .route("/api/sessions/{id}", delete(agent_server::routes::session::delete))
-        .route("/api/sessions/{id}/messages", get(agent_server::routes::session::messages))
+        .route(
+            "/api/sessions/{id}",
+            get(agent_server::routes::session::get_one),
+        )
+        .route(
+            "/api/sessions/{id}",
+            put(agent_server::routes::session::update),
+        )
+        .route(
+            "/api/sessions/{id}",
+            delete(agent_server::routes::session::delete),
+        )
+        .route(
+            "/api/sessions/{id}/messages",
+            get(agent_server::routes::session::messages),
+        )
         // Workflows
         .route("/api/workflows", get(agent_server::routes::workflow::list))
-        .route("/api/workflows", post(agent_server::routes::workflow::create))
-        .route("/api/workflows/{id}", get(agent_server::routes::workflow::get_one))
-        .route("/api/workflows/{id}", put(agent_server::routes::workflow::update))
-        .route("/api/workflows/{id}", delete(agent_server::routes::workflow::delete))
+        .route(
+            "/api/workflows",
+            post(agent_server::routes::workflow::create),
+        )
+        .route(
+            "/api/workflows/{id}",
+            get(agent_server::routes::workflow::get_one),
+        )
+        .route(
+            "/api/workflows/{id}",
+            put(agent_server::routes::workflow::update),
+        )
+        .route(
+            "/api/workflows/{id}",
+            delete(agent_server::routes::workflow::delete),
+        )
         // Tasks
         .route("/api/tasks", get(agent_server::routes::task::list))
         .route("/api/tasks", post(agent_server::routes::task::create))
         .route("/api/tasks/{id}", get(agent_server::routes::task::get_one))
         .route("/api/tasks/{id}", put(agent_server::routes::task::update))
-        .route("/api/tasks/{id}", delete(agent_server::routes::task::delete))
+        .route(
+            "/api/tasks/{id}",
+            delete(agent_server::routes::task::delete),
+        )
         .with_state(state)
 }
 
@@ -161,9 +205,15 @@ async fn config_get_all_returns_seed_data() {
 
     let (status, body) = get_json(&app, "/api/config").await;
     assert_eq!(status, StatusCode::OK);
-    assert!(body.as_object().unwrap().len() > 0, "Config should have seed data");
+    assert!(
+        body.as_object().unwrap().len() > 0,
+        "Config should have seed data"
+    );
     assert!(body.get("api_key").is_some(), "Should have api_key config");
-    assert!(body.get("default_model").is_some(), "Should have default_model");
+    assert!(
+        body.get("default_model").is_some(),
+        "Should have default_model"
+    );
 }
 
 #[tokio::test]
@@ -326,13 +376,7 @@ async fn config_update_all_with_empty_object() {
     let app = create_test_app(state);
 
     // Updating with empty object should not error
-    let (status, _) = request_json(
-        &app,
-        Method::PUT,
-        "/api/config",
-        serde_json::json!({}),
-    )
-    .await;
+    let (status, _) = request_json(&app, Method::PUT, "/api/config", serde_json::json!({})).await;
     assert_eq!(status, StatusCode::OK);
 }
 
@@ -349,7 +393,12 @@ async fn config_get_all_returns_content_type_json() {
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     // Axum's Json extractor sets content-type: application/json
-    let content_type = resp.headers().get("content-type").unwrap().to_str().unwrap();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .unwrap()
+        .to_str()
+        .unwrap();
     assert!(content_type.contains("application/json"));
 }
 

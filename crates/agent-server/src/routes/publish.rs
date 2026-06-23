@@ -23,11 +23,7 @@ pub async fn get_published(
     Path(publish_id): Path<String>,
 ) -> Result<Html<String>, ApiError> {
     // Look up the workflow run that generated this publish
-    let run = state
-        .workflow_repo
-        .get_run(&publish_id)
-        .await
-        ?;
+    let run = state.workflow_repo.get_run(&publish_id).await?;
 
     let run = match run {
         Some(r) if r.publish_url.is_some() => r,
@@ -135,7 +131,9 @@ fn render_publish_page(
     html.push_str("</div>\n");
     // Download button
     html.push_str("<div class=\"pub-toolbar-actions\">\n");
-    html.push_str("<button class=\"btn-download\" id=\"btn-download\" title=\"Download as Markdown\">\n");
+    html.push_str(
+        "<button class=\"btn-download\" id=\"btn-download\" title=\"Download as Markdown\">\n",
+    );
     html.push_str("<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><polyline points=\"7 10 12 15 17 10\"/><line x1=\"12\" y1=\"15\" x2=\"12\" y2=\"3\"/></svg>\n");
     html.push_str("<span>Download .md</span>\n");
     html.push_str("</button>\n");
@@ -149,8 +147,14 @@ fn render_publish_page(
     html.push_str(&format!("<span>ID: {}</span>\n", escape_html(id)));
     html.push_str(&format!("<span>{}</span>\n", status_html));
     html.push_str(&format!("<span>Started: {}</span>\n", escape_html(started)));
-    html.push_str(&format!("<span>Finished: {}</span>\n", escape_html(finished)));
-    html.push_str(&format!("<span class=\"reading-time\">{} read</span>\n", reading_time));
+    html.push_str(&format!(
+        "<span>Finished: {}</span>\n",
+        escape_html(finished)
+    ));
+    html.push_str(&format!(
+        "<span class=\"reading-time\">{} read</span>\n",
+        reading_time
+    ));
     html.push_str("</div>\n</div>\n");
 
     // ── Content ──
@@ -165,7 +169,10 @@ fn render_publish_page(
     html.push_str("</div>\n"); // .pub-layout
 
     // ── Embedded raw markdown (base64) for download ──
-    html.push_str(&format!("<script id=\"raw-markdown\" type=\"text/plain\" data-b64=\"{}\"></script>\n", raw_b64));
+    html.push_str(&format!(
+        "<script id=\"raw-markdown\" type=\"text/plain\" data-b64=\"{}\"></script>\n",
+        raw_b64
+    ));
 
     // ── highlight.js ──
     html.push_str("<script src=\"https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js\"></script>\n");
@@ -1119,4 +1126,3 @@ const PUBLISH_JS: &str = r##"
   highlightCode();
 })();
 "##;
-

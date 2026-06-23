@@ -19,10 +19,7 @@ use crate::state::AppState;
 ///
 /// The token for authentication is extracted from the `?token=` query parameter
 /// by the global `authenticate` middleware before this handler runs.
-pub async fn ws_handler(
-    ws: WebSocketUpgrade,
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> impl IntoResponse {
     info!(
         "WebSocket upgrade request (active conns: {})",
         state.get_active_ws()

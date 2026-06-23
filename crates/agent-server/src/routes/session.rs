@@ -80,12 +80,15 @@ pub async fn create(
     state.session_repo.create(&session).await?;
 
     // Broadcast real-time event
-    state.broadcast_event("session_created", json!({
-        "session_id": id,
-        "name": session_name,
-        "model": session_model,
-        "channel": "web",
-    }));
+    state.broadcast_event(
+        "session_created",
+        json!({
+            "session_id": id,
+            "name": session_name,
+            "model": session_model,
+            "channel": "web",
+        }),
+    );
 
     Ok(Json(json!(session)))
 }
@@ -116,12 +119,24 @@ pub async fn update(
         .await?
         .ok_or_else(|| ApiError::NotFound(format!("Session '{}' not found", id)))?;
 
-    if let Some(name) = body.name { session.name = name; }
-    if let Some(agent_id) = body.agent_id { session.agent_id = Some(agent_id); }
-    if let Some(sp) = body.system_prompt { session.system_prompt = Some(sp); }
-    if let Some(model) = body.model { session.model = model; }
-    if let Some(temp) = body.temperature { session.temperature = temp; }
-    if let Some(mt) = body.max_tokens { session.max_tokens = mt; }
+    if let Some(name) = body.name {
+        session.name = name;
+    }
+    if let Some(agent_id) = body.agent_id {
+        session.agent_id = Some(agent_id);
+    }
+    if let Some(sp) = body.system_prompt {
+        session.system_prompt = Some(sp);
+    }
+    if let Some(model) = body.model {
+        session.model = model;
+    }
+    if let Some(temp) = body.temperature {
+        session.temperature = temp;
+    }
+    if let Some(mt) = body.max_tokens {
+        session.max_tokens = mt;
+    }
 
     state.session_repo.update(&session).await?;
     Ok(Json(json!(session)))

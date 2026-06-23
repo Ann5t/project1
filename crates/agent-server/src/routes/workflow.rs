@@ -103,12 +103,24 @@ pub async fn update(
         .await?
         .ok_or_else(|| ApiError::NotFound(format!("Workflow '{}' not found", id)))?;
 
-    if let Some(name) = body.name { wf.name = name; }
-    if let Some(desc) = body.description { wf.description = desc; }
-    if let Some(def) = body.definition { wf.definition = def.to_string(); }
-    if let Some(tt) = body.trigger_type { wf.trigger_type = tt; }
-    if let Some(ce) = body.cron_expression { wf.cron_expression = Some(ce); }
-    if let Some(en) = body.enabled { wf.enabled = en; }
+    if let Some(name) = body.name {
+        wf.name = name;
+    }
+    if let Some(desc) = body.description {
+        wf.description = desc;
+    }
+    if let Some(def) = body.definition {
+        wf.definition = def.to_string();
+    }
+    if let Some(tt) = body.trigger_type {
+        wf.trigger_type = tt;
+    }
+    if let Some(ce) = body.cron_expression {
+        wf.cron_expression = Some(ce);
+    }
+    if let Some(en) = body.enabled {
+        wf.enabled = en;
+    }
 
     state.workflow_repo.update(&wf).await?;
     Ok(Json(json!(wf)))
@@ -194,10 +206,13 @@ async fn run_all(state: AppState, id: String) -> Result<Json<Value>, ApiError> {
         serde_json::from_str(&wf.definition)
             .map_err(|e| ApiError::BadRequest(format!("Invalid workflow definition: {}", e)))?;
 
-    state.broadcast_event("workflow_started", json!({
-        "workflow_id": id,
-        "name": wf.name,
-    }));
+    state.broadcast_event(
+        "workflow_started",
+        json!({
+            "workflow_id": id,
+            "name": wf.name,
+        }),
+    );
 
     let result = state.workflow_engine.execute(&id, &definition).await?;
 
@@ -210,11 +225,14 @@ async fn run_all(state: AppState, id: String) -> Result<Json<Value>, ApiError> {
         agent_core::workflow::types::StepStatus::Pending => "pending",
         agent_core::workflow::types::StepStatus::Running => "running",
     };
-    state.broadcast_event("workflow_completed", json!({
-        "workflow_id": id,
-        "name": wf.name,
-        "status": status_str,
-    }));
+    state.broadcast_event(
+        "workflow_completed",
+        json!({
+            "workflow_id": id,
+            "name": wf.name,
+            "status": status_str,
+        }),
+    );
 
     if let Some(ref notifier) = state.email_notifier {
         let result_url = format!("http://localhost:3000/workflows/{}", id);
@@ -222,7 +240,9 @@ async fn run_all(state: AppState, id: String) -> Result<Json<Value>, ApiError> {
         let name = wf.name.clone();
         let status = status_str.to_string();
         tokio::spawn(async move {
-            notify.notify_workflow_complete(&name, &status, &result_url).await;
+            notify
+                .notify_workflow_complete(&name, &status, &result_url)
+                .await;
         });
     }
 

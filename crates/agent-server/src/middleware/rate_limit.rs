@@ -88,7 +88,8 @@ impl RateLimiter {
     ///
     /// Same return convention as [`check_global`].
     pub async fn check_chat(&self, ip: &str) -> Result<(u32, u64), (u64, u32)> {
-        self.check_bucket(&self.chat_buckets, ip, self.chat_rpm).await
+        self.check_bucket(&self.chat_buckets, ip, self.chat_rpm)
+            .await
     }
 
     // ── SSE concurrency ────────────────────────────────────────────────
@@ -153,10 +154,7 @@ impl RateLimiter {
             // Compute retry-after: when the oldest entry expires.
             let oldest = entry.first().copied().unwrap_or(now);
             let expires_at = oldest + self.window;
-            let retry_after = expires_at
-                .duration_since(now)
-                .as_secs()
-                .max(1);
+            let retry_after = expires_at.duration_since(now).as_secs().max(1);
             Err((retry_after, limit))
         } else {
             entry.push(now);
@@ -362,7 +360,10 @@ mod tests {
         // When behind multiple proxies: client, proxy1, proxy2
         let req = make_request(Some("10.0.0.1, 172.16.0.2, 192.168.0.3"));
         let ip = extract_client_ip(&req);
-        assert_eq!(ip, "10.0.0.1", "Should extract the leftmost (original client) IP");
+        assert_eq!(
+            ip, "10.0.0.1",
+            "Should extract the leftmost (original client) IP"
+        );
     }
 
     #[tokio::test]
@@ -407,7 +408,11 @@ mod tests {
         let rl = RateLimiter::new(5, 2, 2, true);
         for _ in 0..5 {
             let result = rl.check_global("test-ip-1").await;
-            assert!(result.is_ok(), "Should allow {} requests under the limit", 5);
+            assert!(
+                result.is_ok(),
+                "Should allow {} requests under the limit",
+                5
+            );
         }
     }
 
@@ -440,7 +445,10 @@ mod tests {
 
         // The very next request (boundary) should be blocked
         let result = rl.check_global(ip).await;
-        assert!(result.is_err(), "Request exactly at boundary should be rate limited");
+        assert!(
+            result.is_err(),
+            "Request exactly at boundary should be rate limited"
+        );
     }
 
     #[tokio::test]
@@ -454,7 +462,10 @@ mod tests {
 
         // IP 2 should still be allowed
         let result = rl.check_global("ip-b").await;
-        assert!(result.is_ok(), "Different IP should have independent limits");
+        assert!(
+            result.is_ok(),
+            "Different IP should have independent limits"
+        );
     }
 
     #[tokio::test]
@@ -489,7 +500,11 @@ mod tests {
         let result = rl.check_global(ip).await;
         assert!(result.is_err());
         if let Err((retry_after, _)) = result {
-            assert!(retry_after >= 1, "retry_after should be at least 1 second, got {}", retry_after);
+            assert!(
+                retry_after >= 1,
+                "retry_after should be at least 1 second, got {}",
+                retry_after
+            );
         }
     }
 
@@ -499,7 +514,10 @@ mod tests {
         assert!(!rl.enabled, "Enabled flag should be false when disabled");
 
         let rl_enabled = RateLimiter::new(1, 1, 1, true); // enabled
-        assert!(rl_enabled.enabled, "Enabled flag should be true when enabled");
+        assert!(
+            rl_enabled.enabled,
+            "Enabled flag should be true when enabled"
+        );
     }
 
     #[tokio::test]
@@ -511,11 +529,17 @@ mod tests {
         for _ in 0..3 {
             assert!(rl.check_chat(ip).await.is_ok());
         }
-        assert!(rl.check_chat(ip).await.is_err(), "Chat limit should be exhausted");
+        assert!(
+            rl.check_chat(ip).await.is_err(),
+            "Chat limit should be exhausted"
+        );
 
         // Global should still have capacity
         let result = rl.check_global(ip).await;
-        assert!(result.is_ok(), "Global limit should be independent of chat limit");
+        assert!(
+            result.is_ok(),
+            "Global limit should be independent of chat limit"
+        );
     }
 
     #[tokio::test]
@@ -535,7 +559,10 @@ mod tests {
 
         // Disconnect one
         rl.sse_disconnected(ip).await;
-        assert!(rl.check_sse(ip).await.is_ok(), "After disconnect, slot should be free");
+        assert!(
+            rl.check_sse(ip).await.is_ok(),
+            "After disconnect, slot should be free"
+        );
     }
 
     #[tokio::test]
@@ -590,8 +617,21 @@ mod tests {
         add_rate_limit_headers(&mut response, 100, 42, 58);
 
         let headers = response.headers();
-        assert_eq!(headers.get("X-RateLimit-Limit").unwrap().to_str().unwrap(), "100");
-        assert_eq!(headers.get("X-RateLimit-Remaining").unwrap().to_str().unwrap(), "42");
-        assert_eq!(headers.get("X-RateLimit-Reset").unwrap().to_str().unwrap(), "58");
+        assert_eq!(
+            headers.get("X-RateLimit-Limit").unwrap().to_str().unwrap(),
+            "100"
+        );
+        assert_eq!(
+            headers
+                .get("X-RateLimit-Remaining")
+                .unwrap()
+                .to_str()
+                .unwrap(),
+            "42"
+        );
+        assert_eq!(
+            headers.get("X-RateLimit-Reset").unwrap().to_str().unwrap(),
+            "58"
+        );
     }
 }

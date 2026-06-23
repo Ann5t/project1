@@ -19,8 +19,8 @@
 
 pub mod feishu;
 pub mod qq_bot;
-pub mod wechat_work;
 pub mod webhook;
+pub mod wechat_work;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};

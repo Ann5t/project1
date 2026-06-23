@@ -20,6 +20,9 @@ jobs:
       - name: Cache Cargo registry and build artifacts
         uses: Swatinem/rust-cache@v2
 
+      - name: Install system dependencies (mold linker)
+        run: sudo apt-get update && sudo apt-get install -y mold
+
       - name: cargo check
         run: cargo check --all-targets
 

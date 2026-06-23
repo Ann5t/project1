@@ -41,11 +41,10 @@ impl ConfigRepo {
 
     /// Get a single config value by key
     pub async fn get(&self, key: &str) -> Result<Option<String>, DbError> {
-        let row: Option<(String,)> =
-            sqlx::query_as("SELECT value FROM config WHERE key = ?")
-                .bind(key)
-                .fetch_optional(&self.pool)
-                .await?;
+        let row: Option<(String,)> = sqlx::query_as("SELECT value FROM config WHERE key = ?")
+            .bind(key)
+            .fetch_optional(&self.pool)
+            .await?;
         Ok(row.map(|r| r.0))
     }
 
@@ -77,7 +76,9 @@ impl ConfigRepo {
     }
 
     /// Get all config grouped by category
-    pub async fn get_all_grouped(&self) -> Result<HashMap<String, HashMap<String, String>>, DbError> {
+    pub async fn get_all_grouped(
+        &self,
+    ) -> Result<HashMap<String, HashMap<String, String>>, DbError> {
         let rows: Vec<(String, String, String)> =
             sqlx::query_as("SELECT key, value, category FROM config ORDER BY category, key")
                 .fetch_all(&self.pool)

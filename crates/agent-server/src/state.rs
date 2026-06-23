@@ -15,9 +15,7 @@ use agent_core::scheduler::engine::TaskSchedulerEngine;
 use agent_core::session::manager::SessionManager;
 use agent_core::tool::registry::ToolRegistry;
 use agent_core::workflow::engine::WorkflowEngine;
-use agent_db::repo::{
-    ChannelRepo, ConfigRepo, MessageRepo, SessionRepo, TaskRepo, WorkflowRepo,
-};
+use agent_db::repo::{ChannelRepo, ConfigRepo, MessageRepo, SessionRepo, TaskRepo, WorkflowRepo};
 use serde::Serialize;
 use serde_json::Value;
 use sqlx::SqlitePool;
@@ -112,21 +110,11 @@ impl AppState {
         llm: Arc<dyn LlmClient + Send + Sync>,
         tools: Arc<ToolRegistry>,
     ) -> Self {
-        let session_manager = Arc::new(SessionManager::new(
-            llm.clone(),
-            tools.clone(),
-            db.clone(),
-        ));
+        let session_manager = Arc::new(SessionManager::new(llm.clone(), tools.clone(), db.clone()));
 
-        let workflow_engine = Arc::new(WorkflowEngine::new(
-            llm.clone(),
-            tools.clone(),
-        ));
+        let workflow_engine = Arc::new(WorkflowEngine::new(llm.clone(), tools.clone()));
 
-        let scheduler = Arc::new(TaskSchedulerEngine::new(
-            llm.clone(),
-            tools.clone(),
-        ));
+        let scheduler = Arc::new(TaskSchedulerEngine::new(llm.clone(), tools.clone()));
 
         // Broadcast channel for WebSocket real-time events (capacity: 256).
         let (ws_tx, _) = broadcast::channel(256);
@@ -309,7 +297,12 @@ impl AppState {
 
     /// Get a snapshot of the active-connections history.
     pub async fn get_active_conn_history(&self) -> Vec<(i64, u64)> {
-        self.active_conn_history.read().await.iter().copied().collect()
+        self.active_conn_history
+            .read()
+            .await
+            .iter()
+            .copied()
+            .collect()
     }
 
     /// Reset all monitoring counters.

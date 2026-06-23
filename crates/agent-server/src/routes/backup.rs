@@ -38,9 +38,7 @@ const SQLITE_HEADER: &[u8; 16] = b"SQLite format 3\0";
 /// download.
 ///
 /// After creation, old backups are pruned according to `backup_keep_count` config.
-pub async fn backup(
-    State(state): State<AppState>,
-) -> Result<impl IntoResponse, ApiError> {
+pub async fn backup(State(state): State<AppState>) -> Result<impl IntoResponse, ApiError> {
     let now = chrono::Utc::now();
     let timestamp = now.format("%Y%m%d-%H%M%S").to_string();
     let filename = format!("agent-backup-{}.db", timestamp);
@@ -69,9 +67,9 @@ pub async fn backup(
     info!("Database backup created: {}", backup_path.display());
 
     // Read the backup file into memory for the HTTP response.
-    let data = fs::read(&backup_path).await.map_err(|e| {
-        ApiError::Internal(anyhow::anyhow!("Failed to read backup file: {}", e))
-    })?;
+    let data = fs::read(&backup_path)
+        .await
+        .map_err(|e| ApiError::Internal(anyhow::anyhow!("Failed to read backup file: {}", e)))?;
 
     // Apply retention policy: keep only the N most recent backups.
     let keep_count: usize = state
@@ -83,14 +81,14 @@ pub async fn backup(
         .unwrap_or(7);
     cleanup_old_backups(&backups_dir, keep_count).await;
 
-    let disposition = HeaderValue::from_str(&format!(
-        "attachment; filename=\"{}\"",
-        filename
-    ))
-    .map_err(|e| ApiError::Internal(anyhow::anyhow!("Invalid filename for header: {}", e)))?;
+    let disposition = HeaderValue::from_str(&format!("attachment; filename=\"{}\"", filename))
+        .map_err(|e| ApiError::Internal(anyhow::anyhow!("Invalid filename for header: {}", e)))?;
 
     let headers = [
-        (header::CONTENT_TYPE, HeaderValue::from_static("application/octet-stream")),
+        (
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("application/octet-stream"),
+        ),
         (header::CONTENT_DISPOSITION, disposition),
     ];
 
@@ -119,10 +117,7 @@ pub async fn restore(
     while let Ok(Some(field)) = multipart.next_field().await {
         let name = field.name().unwrap_or("").to_string();
         if name == "file" || name == "backup" {
-            upload_filename = field
-                .file_name()
-                .unwrap_or("unknown.db")
-                .to_string();
+            upload_filename = field.file_name().unwrap_or("unknown.db").to_string();
             let bytes = field
                 .bytes()
                 .await
@@ -155,10 +150,7 @@ pub async fn restore(
     // Write the uploaded backup to a temporary file for ATTACH.
     let backups_dir = PathBuf::from(BACKUPS_DIR);
     fs::create_dir_all(&backups_dir).await.map_err(|e| {
-        ApiError::Internal(anyhow::anyhow!(
-            "Failed to create backups directory: {}",
-            e
-        ))
+        ApiError::Internal(anyhow::anyhow!("Failed to create backups directory: {}", e))
     })?;
 
     let temp_path = backups_dir.join("_restore_temp.db");
@@ -261,10 +253,7 @@ pub async fn restore(
 
     result?;
 
-    info!(
-        "Database restored successfully from '{}'",
-        upload_filename
-    );
+    info!("Database restored successfully from '{}'", upload_filename);
 
     Ok(Json(json!({
         "status": "restored",
@@ -279,9 +268,7 @@ pub async fn restore(
 ///
 /// Returns each file's name, size in bytes, and last-modified timestamp,
 /// sorted by most recent first.
-pub async fn list_backups(
-    State(_state): State<AppState>,
-) -> Result<Json<Value>, ApiError> {
+pub async fn list_backups(State(_state): State<AppState>) -> Result<Json<Value>, ApiError> {
     let backups_dir = PathBuf::from(BACKUPS_DIR);
 
     if !backups_dir.exists() {
@@ -290,10 +277,7 @@ pub async fn list_backups(
 
     let mut entries: Vec<BackupEntry> = Vec::new();
     let mut read_dir = fs::read_dir(&backups_dir).await.map_err(|e| {
-        ApiError::Internal(anyhow::anyhow!(
-            "Failed to read backups directory: {}",
-            e
-        ))
+        ApiError::Internal(anyhow::anyhow!("Failed to read backups directory: {}", e))
     })?;
 
     while let Ok(Some(entry)) = read_dir.next_entry().await {
@@ -387,10 +371,7 @@ async fn cleanup_old_backups(backups_dir: &std::path::Path, keep_count: usize) {
         if !path.is_file() {
             continue;
         }
-        let filename = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+        let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         if filename.starts_with("agent-backup-") && filename.ends_with(".db") {
             entries.push((filename.to_string(), path));
         }
@@ -490,20 +471,14 @@ pub async fn start_auto_backup(state: AppState) {
 /// Perform a backup and save it to disk (no HTTP response).
 ///
 /// Returns the filename of the created backup on success.
-pub async fn run_backup_to_disk(
-    state: &AppState,
-    keep_count: usize,
-) -> Result<String, ApiError> {
+pub async fn run_backup_to_disk(state: &AppState, keep_count: usize) -> Result<String, ApiError> {
     let now = chrono::Utc::now();
     let timestamp = now.format("%Y%m%d-%H%M%S").to_string();
     let filename = format!("agent-backup-{}.db", timestamp);
 
     let backups_dir = PathBuf::from(BACKUPS_DIR);
     fs::create_dir_all(&backups_dir).await.map_err(|e| {
-        ApiError::Internal(anyhow::anyhow!(
-            "Failed to create backups directory: {}",
-            e
-        ))
+        ApiError::Internal(anyhow::anyhow!("Failed to create backups directory: {}", e))
     })?;
 
     let backup_path = backups_dir.join(&filename);

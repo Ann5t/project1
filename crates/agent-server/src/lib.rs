@@ -1,5 +1,4 @@
 #![recursion_limit = "512"]
-
 // agent-server: server crate lint configuration
 // We allow noisy pedantic lints that are not critical for a server binary
 #![allow(clippy::pedantic)]

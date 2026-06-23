@@ -9,7 +9,8 @@ use sqlx::SqlitePool;
 
 /// Create an in-memory SQLite pool and run all migrations.
 async fn setup_in_memory_db() -> SqlitePool {
-    let pool = agent_db::pool::create_pool("sqlite::memory:").await
+    let pool = agent_db::pool::create_pool("sqlite::memory:")
+        .await
         .expect("Failed to create in-memory pool");
 
     // Enable WAL and foreign keys for in-memory DB too
@@ -66,8 +67,14 @@ async fn seed_config_populated() {
 
     // The seed migration inserts these keys
     assert!(all.contains_key("api_key"), "api_key not seeded");
-    assert!(all.contains_key("default_model"), "default_model not seeded");
-    assert!(all.contains_key("system_prompt"), "system_prompt not seeded");
+    assert!(
+        all.contains_key("default_model"),
+        "default_model not seeded"
+    );
+    assert!(
+        all.contains_key("system_prompt"),
+        "system_prompt not seeded"
+    );
     assert!(all.contains_key("theme"), "theme not seeded");
     assert!(all.contains_key("language"), "language not seeded");
     assert!(all.contains_key("temperature"), "temperature not seeded");
@@ -278,8 +285,16 @@ async fn session_touch_updates_timestamp() {
     let pool = setup_in_memory_db().await;
     let repo = SessionRepo::new(pool);
 
-    repo.create(&make_session("sess-touch", "Touch Me")).await.unwrap();
-    let before = repo.get("sess-touch").await.unwrap().unwrap().updated_at.clone();
+    repo.create(&make_session("sess-touch", "Touch Me"))
+        .await
+        .unwrap();
+    let before = repo
+        .get("sess-touch")
+        .await
+        .unwrap()
+        .unwrap()
+        .updated_at
+        .clone();
 
     // Small sleep to ensure timestamp actually changes
     tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
@@ -294,7 +309,9 @@ async fn session_delete() {
     let pool = setup_in_memory_db().await;
     let repo = SessionRepo::new(pool);
 
-    repo.create(&make_session("sess-del", "Delete Me")).await.unwrap();
+    repo.create(&make_session("sess-del", "Delete Me"))
+        .await
+        .unwrap();
     assert!(repo.get("sess-del").await.unwrap().is_some());
 
     repo.delete("sess-del").await.unwrap();
@@ -354,10 +371,19 @@ async fn message_insert_and_list() {
     let message_repo = MessageRepo::new(pool);
 
     // Create a parent session first
-    session_repo.create(&make_session("sess-msg", "Msg Test")).await.unwrap();
+    session_repo
+        .create(&make_session("sess-msg", "Msg Test"))
+        .await
+        .unwrap();
 
-    message_repo.insert(&make_message("m1", "sess-msg", "user", "Hello")).await.unwrap();
-    message_repo.insert(&make_message("m2", "sess-msg", "assistant", "Hi!")).await.unwrap();
+    message_repo
+        .insert(&make_message("m1", "sess-msg", "user", "Hello"))
+        .await
+        .unwrap();
+    message_repo
+        .insert(&make_message("m2", "sess-msg", "assistant", "Hi!"))
+        .await
+        .unwrap();
 
     let messages = message_repo.list_by_session("sess-msg").await.unwrap();
     assert_eq!(messages.len(), 2);
@@ -373,11 +399,23 @@ async fn message_list_by_session_ordered_asc() {
     let session_repo = SessionRepo::new(pool.clone());
     let message_repo = MessageRepo::new(pool);
 
-    session_repo.create(&make_session("sess-ordered", "Ordered")).await.unwrap();
+    session_repo
+        .create(&make_session("sess-ordered", "Ordered"))
+        .await
+        .unwrap();
 
-    message_repo.insert(&make_message("ma", "sess-ordered", "user", "A")).await.unwrap();
-    message_repo.insert(&make_message("mb", "sess-ordered", "assistant", "B")).await.unwrap();
-    message_repo.insert(&make_message("mc", "sess-ordered", "user", "C")).await.unwrap();
+    message_repo
+        .insert(&make_message("ma", "sess-ordered", "user", "A"))
+        .await
+        .unwrap();
+    message_repo
+        .insert(&make_message("mb", "sess-ordered", "assistant", "B"))
+        .await
+        .unwrap();
+    message_repo
+        .insert(&make_message("mc", "sess-ordered", "user", "C"))
+        .await
+        .unwrap();
 
     let messages = message_repo.list_by_session("sess-ordered").await.unwrap();
     // Should be ordered by created_at ASC
@@ -391,7 +429,10 @@ async fn message_list_recent() {
     let session_repo = SessionRepo::new(pool.clone());
     let message_repo = MessageRepo::new(pool);
 
-    session_repo.create(&make_session("sess-recent", "Recent")).await.unwrap();
+    session_repo
+        .create(&make_session("sess-recent", "Recent"))
+        .await
+        .unwrap();
 
     for i in 0..10 {
         message_repo
@@ -419,14 +460,37 @@ async fn message_delete_by_session() {
     let session_repo = SessionRepo::new(pool.clone());
     let message_repo = MessageRepo::new(pool);
 
-    session_repo.create(&make_session("sess-del-msg", "Del Msg")).await.unwrap();
-    message_repo.insert(&make_message("m1", "sess-del-msg", "user", "x")).await.unwrap();
-    message_repo.insert(&make_message("m2", "sess-del-msg", "assistant", "y")).await.unwrap();
+    session_repo
+        .create(&make_session("sess-del-msg", "Del Msg"))
+        .await
+        .unwrap();
+    message_repo
+        .insert(&make_message("m1", "sess-del-msg", "user", "x"))
+        .await
+        .unwrap();
+    message_repo
+        .insert(&make_message("m2", "sess-del-msg", "assistant", "y"))
+        .await
+        .unwrap();
 
-    assert_eq!(message_repo.list_by_session("sess-del-msg").await.unwrap().len(), 2);
+    assert_eq!(
+        message_repo
+            .list_by_session("sess-del-msg")
+            .await
+            .unwrap()
+            .len(),
+        2
+    );
 
-    message_repo.delete_by_session("sess-del-msg").await.unwrap();
-    assert!(message_repo.list_by_session("sess-del-msg").await.unwrap().is_empty());
+    message_repo
+        .delete_by_session("sess-del-msg")
+        .await
+        .unwrap();
+    assert!(message_repo
+        .list_by_session("sess-del-msg")
+        .await
+        .unwrap()
+        .is_empty());
 }
 
 #[tokio::test]
@@ -435,7 +499,10 @@ async fn message_empty_session() {
     let session_repo = SessionRepo::new(pool.clone());
     let message_repo = MessageRepo::new(pool);
 
-    session_repo.create(&make_session("sess-empty", "Empty")).await.unwrap();
+    session_repo
+        .create(&make_session("sess-empty", "Empty"))
+        .await
+        .unwrap();
 
     let messages = message_repo.list_by_session("sess-empty").await.unwrap();
     assert!(messages.is_empty());
@@ -447,7 +514,10 @@ async fn message_with_tool_calls() {
     let session_repo = SessionRepo::new(pool.clone());
     let message_repo = MessageRepo::new(pool);
 
-    session_repo.create(&make_session("sess-tool", "Tool")).await.unwrap();
+    session_repo
+        .create(&make_session("sess-tool", "Tool"))
+        .await
+        .unwrap();
 
     let msg = MessageRow {
         id: "tool-msg-1".to_string(),
@@ -463,7 +533,11 @@ async fn message_with_tool_calls() {
     let messages = message_repo.list_by_session("sess-tool").await.unwrap();
     assert_eq!(messages.len(), 1);
     assert!(messages[0].tool_calls.is_some());
-    assert!(messages[0].tool_calls.as_ref().unwrap().contains("calculator"));
+    assert!(messages[0]
+        .tool_calls
+        .as_ref()
+        .unwrap()
+        .contains("calculator"));
 }
 
 #[tokio::test]
@@ -472,8 +546,14 @@ async fn message_cascade_on_session_delete() {
     let session_repo = SessionRepo::new(pool.clone());
     let message_repo = MessageRepo::new(pool);
 
-    session_repo.create(&make_session("sess-cascade", "Cascade")).await.unwrap();
-    message_repo.insert(&make_message("mx", "sess-cascade", "user", "test")).await.unwrap();
+    session_repo
+        .create(&make_session("sess-cascade", "Cascade"))
+        .await
+        .unwrap();
+    message_repo
+        .insert(&make_message("mx", "sess-cascade", "user", "test"))
+        .await
+        .unwrap();
 
     // Delete the session — messages should be cascade-deleted
     session_repo.delete("sess-cascade").await.unwrap();
@@ -509,9 +589,23 @@ async fn full_session_lifecycle_with_messages() {
     session_repo.create(&session).await.unwrap();
 
     // Add messages
-    message_repo.insert(&make_message("msg-1", "lifecycle-1", "system", "Be concise.")).await.unwrap();
-    message_repo.insert(&make_message("msg-2", "lifecycle-1", "user", "Hi")).await.unwrap();
-    message_repo.insert(&make_message("msg-3", "lifecycle-1", "assistant", "Hello!")).await.unwrap();
+    message_repo
+        .insert(&make_message(
+            "msg-1",
+            "lifecycle-1",
+            "system",
+            "Be concise.",
+        ))
+        .await
+        .unwrap();
+    message_repo
+        .insert(&make_message("msg-2", "lifecycle-1", "user", "Hi"))
+        .await
+        .unwrap();
+    message_repo
+        .insert(&make_message("msg-3", "lifecycle-1", "assistant", "Hello!"))
+        .await
+        .unwrap();
 
     // Verify messages
     let msgs = message_repo.list_by_session("lifecycle-1").await.unwrap();
@@ -529,5 +623,9 @@ async fn full_session_lifecycle_with_messages() {
     session_repo.delete("lifecycle-1").await.unwrap();
 
     assert!(session_repo.get("lifecycle-1").await.unwrap().is_none());
-    assert!(message_repo.list_by_session("lifecycle-1").await.unwrap().is_empty());
+    assert!(message_repo
+        .list_by_session("lifecycle-1")
+        .await
+        .unwrap()
+        .is_empty());
 }

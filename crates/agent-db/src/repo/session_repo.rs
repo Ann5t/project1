@@ -21,11 +21,10 @@ impl SessionRepo {
 
     /// List all sessions, newest first
     pub async fn list(&self) -> Result<Vec<SessionRow>, DbError> {
-        let rows = sqlx::query_as::<_, SessionRow>(
-            "SELECT * FROM sessions ORDER BY updated_at DESC",
-        )
-        .fetch_all(&self.pool)
-        .await?;
+        let rows =
+            sqlx::query_as::<_, SessionRow>("SELECT * FROM sessions ORDER BY updated_at DESC")
+                .fetch_all(&self.pool)
+                .await?;
         Ok(rows)
     }
 

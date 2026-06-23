@@ -182,10 +182,7 @@ pub fn verify_hmac(secret: &str, body: &[u8], signature_header: &str) -> Result<
 pub fn extract_json_path(value: &serde_json::Value, path: &str) -> Option<String> {
     if path.is_empty() || path == "$" {
         // Return the whole value as a string
-        return Some(
-            serde_json::to_string(value)
-                .unwrap_or_else(|_| value.to_string()),
-        );
+        return Some(serde_json::to_string(value).unwrap_or_else(|_| value.to_string()));
     }
 
     let mut current = value;
@@ -204,10 +201,7 @@ pub fn extract_json_path(value: &serde_json::Value, path: &str) -> Option<String
         serde_json::Value::Bool(b) => Some(b.to_string()),
         serde_json::Value::Null => None,
         // For nested objects/arrays, JSON-serialize them
-        other => Some(
-            serde_json::to_string(other)
-                .unwrap_or_else(|_| other.to_string()),
-        ),
+        other => Some(serde_json::to_string(other).unwrap_or_else(|_| other.to_string())),
     }
 }
 
@@ -299,8 +293,10 @@ impl WebhookChannel {
         }
 
         if signature_header.is_empty() {
-            warn!("Webhook '{}': missing X-Signature-256 header but secret is configured",
-                  self.config.webhook_url_path);
+            warn!(
+                "Webhook '{}': missing X-Signature-256 header but secret is configured",
+                self.config.webhook_url_path
+            );
             return Err("Missing X-Signature-256 header".to_string());
         }
 
@@ -309,15 +305,14 @@ impl WebhookChannel {
 
     /// Extract the user message from a JSON body using the configured path.
     pub fn extract_message(&self, body: &serde_json::Value) -> String {
-        extract_json_path(body, &self.config.json_message_path)
-            .unwrap_or_else(|| {
-                warn!(
-                    "Webhook '{}': failed to extract message at path '{}'",
-                    self.config.webhook_url_path, self.config.json_message_path
-                );
-                // Fallback: return the whole body as a string
-                body.to_string()
-            })
+        extract_json_path(body, &self.config.json_message_path).unwrap_or_else(|| {
+            warn!(
+                "Webhook '{}': failed to extract message at path '{}'",
+                self.config.webhook_url_path, self.config.json_message_path
+            );
+            // Fallback: return the whole body as a string
+            body.to_string()
+        })
     }
 
     /// Format the AI response using the configured template.
@@ -446,8 +441,7 @@ impl Channel for WebhookChannel {
             params.params.get("test_payload").and_then(|v| v.as_str()),
             params.params.get("test_signature").and_then(|v| v.as_str()),
         ) {
-            return verify_hmac(&self.config.secret, payload.as_bytes(), sig)
-                .map(|_| true);
+            return verify_hmac(&self.config.secret, payload.as_bytes(), sig).map(|_| true);
         }
 
         // Otherwise just confirm configuration exists
@@ -582,19 +576,13 @@ mod tests {
     #[test]
     fn test_extract_json_path_number() {
         let body = serde_json::json!({"count": 42});
-        assert_eq!(
-            extract_json_path(&body, "count"),
-            Some("42".to_string())
-        );
+        assert_eq!(extract_json_path(&body, "count"), Some("42".to_string()));
     }
 
     #[test]
     fn test_extract_json_path_bool() {
         let body = serde_json::json!({"active": true});
-        assert_eq!(
-            extract_json_path(&body, "active"),
-            Some("true".to_string())
-        );
+        assert_eq!(extract_json_path(&body, "active"), Some("true".to_string()));
     }
 
     #[test]
@@ -759,10 +747,7 @@ mod tests {
 
     #[test]
     fn test_format_response_unicode_characters() {
-        let result = format_response(
-            "你好世界 🌍 こんにちは",
-            r#"{"reply": "{{reply}}"}"#,
-        );
+        let result = format_response("你好世界 🌍 こんにちは", r#"{"reply": "{{reply}}"}"#);
         let reply = result["reply"].as_str().unwrap();
         assert!(reply.contains("你好世界"));
         assert!(reply.contains("🌍"));

@@ -95,11 +95,7 @@ pub async fn search(
     }
 
     // Sort by score descending, then by type (sessions first)
-    all_results.sort_by(|a, b| {
-        b.score
-            .cmp(&a.score)
-            .then_with(|| a.r#type.cmp(&b.r#type))
-    });
+    all_results.sort_by(|a, b| b.score.cmp(&a.score).then_with(|| a.r#type.cmp(&b.r#type)));
 
     let total = all_results.len() as u64;
 
@@ -126,10 +122,7 @@ struct SessionSearchRow {
 }
 
 /// Search sessions by name matching.
-async fn search_sessions(
-    pool: &SqlitePool,
-    query: &str,
-) -> Result<Vec<SearchResult>, ApiError> {
+async fn search_sessions(pool: &SqlitePool, query: &str) -> Result<Vec<SearchResult>, ApiError> {
     let pattern = format!("%{}%", query);
 
     let rows = sqlx::query_as::<_, SessionSearchRow>(
@@ -169,10 +162,7 @@ struct MessageSearchRow {
 }
 
 /// Search messages by content matching.
-async fn search_messages(
-    pool: &SqlitePool,
-    query: &str,
-) -> Result<Vec<SearchResult>, ApiError> {
+async fn search_messages(pool: &SqlitePool, query: &str) -> Result<Vec<SearchResult>, ApiError> {
     let pattern = format!("%{}%", query);
 
     let rows = sqlx::query_as::<_, MessageSearchRow>(
@@ -233,7 +223,11 @@ fn build_message_snippet(content: &str, query: &str) -> String {
         let context_end = (match_end + CONTEXT_CHARS).min(content.len());
 
         let prefix = if context_start > 0 { "..." } else { "" };
-        let suffix = if context_end < content.len() { "..." } else { "" };
+        let suffix = if context_end < content.len() {
+            "..."
+        } else {
+            ""
+        };
 
         // Get the window, trying to break at word boundaries
         let window = &content[context_start..context_end];

@@ -75,9 +75,7 @@ pub async fn init_db(db_path: &str) -> Result<SqlitePool, error::DbError> {
     if let Some(parent) = Path::new(db_path).parent() {
         if !parent.exists() {
             tokio::fs::create_dir_all(parent).await.map_err(|e| {
-                error::DbError::Connection(format!(
-                    "Failed to create database directory: {e}"
-                ))
+                error::DbError::Connection(format!("Failed to create database directory: {e}"))
             })?;
         }
     }

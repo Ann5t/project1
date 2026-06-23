@@ -23,11 +23,10 @@ impl WorkflowRepo {
     // ── Workflow definitions ──
 
     pub async fn list(&self) -> Result<Vec<WorkflowRow>, DbError> {
-        let rows = sqlx::query_as::<_, WorkflowRow>(
-            "SELECT * FROM workflows ORDER BY updated_at DESC",
-        )
-        .fetch_all(&self.pool)
-        .await?;
+        let rows =
+            sqlx::query_as::<_, WorkflowRow>("SELECT * FROM workflows ORDER BY updated_at DESC")
+                .fetch_all(&self.pool)
+                .await?;
         Ok(rows)
     }
 

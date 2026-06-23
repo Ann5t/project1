@@ -91,16 +91,18 @@ pub async fn export_session(
         }
         "markdown" => {
             let md = render_session_markdown(&session, &messages);
-            let headers = [
-                (header::CONTENT_TYPE, HeaderValue::from_static("text/markdown; charset=utf-8")),
-            ];
+            let headers = [(
+                header::CONTENT_TYPE,
+                HeaderValue::from_static("text/markdown; charset=utf-8"),
+            )];
             Ok((headers, Body::from(md)).into_response())
         }
         "html" => {
             let html = render_session_html(&session, &messages);
-            let headers = [
-                (header::CONTENT_TYPE, HeaderValue::from_static("text/html; charset=utf-8")),
-            ];
+            let headers = [(
+                header::CONTENT_TYPE,
+                HeaderValue::from_static("text/html; charset=utf-8"),
+            )];
             Ok((headers, Body::from(html)).into_response())
         }
         _ => Err(ApiError::BadRequest(format!(
@@ -149,9 +151,10 @@ pub async fn export_workflow_runs(
         }
         "csv" => {
             let csv = render_runs_csv(&runs);
-            let headers = [
-                (header::CONTENT_TYPE, HeaderValue::from_static("text/csv; charset=utf-8")),
-            ];
+            let headers = [(
+                header::CONTENT_TYPE,
+                HeaderValue::from_static("text/csv; charset=utf-8"),
+            )];
             Ok((headers, Body::from(csv)).into_response())
         }
         _ => Err(ApiError::BadRequest(format!(
@@ -273,7 +276,10 @@ pub async fn export_bulk(
         chrono::Utc::now().format("%Y%m%d-%H%M%S")
     );
     let headers = [
-        (header::CONTENT_TYPE, HeaderValue::from_static("application/zip")),
+        (
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("application/zip"),
+        ),
         (
             header::CONTENT_DISPOSITION,
             HeaderValue::from_str(&disposition).unwrap_or(HeaderValue::from_static("attachment")),
@@ -302,10 +308,7 @@ fn render_session_markdown(
     md.push_str(&format!("- **Temperature:** {}\n", session.temperature));
     md.push_str(&format!("- **Max Tokens:** {}\n", session.max_tokens));
     if let Some(ref sp) = session.system_prompt {
-        md.push_str(&format!(
-            "- **System Prompt:** {}\n",
-            sp.replace('\n', " ")
-        ));
+        md.push_str(&format!("- **System Prompt:** {}\n", sp.replace('\n', " ")));
     }
     md.push_str(&format!("- **Created:** {}\n", session.created_at));
     md.push_str(&format!("- **Updated:** {}\n", session.updated_at));
@@ -366,16 +369,12 @@ fn render_session_html(
     let mut html = String::new();
     html.push_str("<!DOCTYPE html>\n<html lang=\"zh-CN\">\n<head>\n");
     html.push_str("<meta charset=\"UTF-8\">\n");
-    html.push_str(
-        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n",
-    );
+    html.push_str("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
     html.push_str(&format!(
         "<title>{} — Exported Session — AI Agent</title>\n",
         escape_html(&session.name)
     ));
-    html.push_str(
-        "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n",
-    );
+    html.push_str("<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n");
     html.push_str(
         "<link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap\" rel=\"stylesheet\">\n",
     );
@@ -386,9 +385,7 @@ fn render_session_html(
 
     // Header block
     html.push_str("<div class=\"header\">\n");
-    html.push_str(
-        "<div class=\"logo\">AI Agent — Exported Session</div>\n",
-    );
+    html.push_str("<div class=\"logo\">AI Agent — Exported Session</div>\n");
     html.push_str("<div class=\"meta\">\n");
     html.push_str(&format!(
         "<span>Session: {}</span>\n",
@@ -398,10 +395,7 @@ fn render_session_html(
         "<span>Model: {}</span>\n",
         escape_html(&session.model)
     ));
-    html.push_str(&format!(
-        "<span>{} messages</span>\n",
-        messages.len()
-    ));
+    html.push_str(&format!("<span>{} messages</span>\n", messages.len()));
     html.push_str(
         "<span style=\"background:rgba(34,197,94,0.15);color:#22c55e;padding:4px 12px;border-radius:20px;font-size:0.8rem;font-weight:600;\">Exported</span>\n",
     );
@@ -462,9 +456,7 @@ body{font-family:'Inter',-apple-system,sans-serif;background:#0a0a0f;color:#f0f0
 
 /// Build a CSV string from a slice of workflow run rows.
 fn render_runs_csv(runs: &[agent_db::models::WorkflowRunRow]) -> String {
-    let mut csv = String::from(
-        "id,workflow_id,status,started_at,finished_at,result,publish_url\n",
-    );
+    let mut csv = String::from("id,workflow_id,status,started_at,finished_at,result,publish_url\n");
     for run in runs {
         csv.push_str(&format!(
             "{},{},{},{},{},{},{}\n",

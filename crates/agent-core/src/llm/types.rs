@@ -315,18 +315,16 @@ mod tests {
             object: "chat.completion".into(),
             created: 1234567890,
             model: "test-model".into(),
-            choices: vec![
-                ChatChoice {
-                    index: 0,
-                    message: ChatMessage {
-                        role: "assistant".into(),
-                        content: "Hello".into(),
-                        tool_calls: None,
-                        tool_call_id: None,
-                    },
-                    finish_reason: Some("stop".into()),
+            choices: vec![ChatChoice {
+                index: 0,
+                message: ChatMessage {
+                    role: "assistant".into(),
+                    content: "Hello".into(),
+                    tool_calls: None,
+                    tool_call_id: None,
                 },
-            ],
+                finish_reason: Some("stop".into()),
+            }],
         };
 
         let json = serde_json::to_string(&resp).unwrap();

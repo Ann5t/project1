@@ -19,14 +19,11 @@ impl ServerConfig {
     /// Build a `ServerConfig` from environment variables with sensible defaults.
     pub fn from_env() -> Self {
         Self {
-            bind_address: env::var("BIND_ADDRESS")
-                .unwrap_or_else(|_| "0.0.0.0:3000".into()),
-            database_path: env::var("DATABASE_PATH")
-                .unwrap_or_else(|_| "data/agent.db".into()),
+            bind_address: env::var("BIND_ADDRESS").unwrap_or_else(|_| "0.0.0.0:3000".into()),
+            database_path: env::var("DATABASE_PATH").unwrap_or_else(|_| "data/agent.db".into()),
             frontend_dir: env::var("FRONTEND_DIR")
                 .unwrap_or_else(|_| "crates/agent-frontend".into()),
-            rust_log: env::var("RUST_LOG")
-                .unwrap_or_else(|_| "info".into()),
+            rust_log: env::var("RUST_LOG").unwrap_or_else(|_| "info".into()),
         }
     }
 }

@@ -8,9 +8,15 @@ use crate::tool::registry::ToolRegistry;
 /// Scheduler engine for cron-based tasks
 /// Uses tokio-cron-scheduler for cron parsing and scheduling
 pub struct TaskSchedulerEngine {
-    #[expect(dead_code, reason = "Reserved for future cron-based task execution (Phase 9)")]
+    #[expect(
+        dead_code,
+        reason = "Reserved for future cron-based task execution (Phase 9)"
+    )]
     llm: Arc<dyn LlmClient>,
-    #[expect(dead_code, reason = "Reserved for future tool-aware task execution (Phase 9)")]
+    #[expect(
+        dead_code,
+        reason = "Reserved for future tool-aware task execution (Phase 9)"
+    )]
     tools: Arc<ToolRegistry>,
 }
 

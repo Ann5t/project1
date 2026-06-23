@@ -64,8 +64,7 @@ impl SessionManager {
         let session = self
             .session_repo
             .get(session_id)
-            .await
-            ?
+            .await?
             .ok_or_else(|| CoreError::SessionNotFound(session_id.to_string()))?;
 
         let model = model.unwrap_or(&session.model);
@@ -84,16 +83,16 @@ impl SessionManager {
         }
 
         // Load recent messages
-        let history = self.message_repo.list_by_session(session_id).await
-            ?;
+        let history = self.message_repo.list_by_session(session_id).await?;
 
         for msg in &history {
             messages.push(ChatMessage {
                 role: msg.role.clone(),
                 content: msg.content.clone(),
-                tool_calls: msg.tool_calls.as_ref().and_then(|tc| {
-                    serde_json::from_str(tc).ok()
-                }),
+                tool_calls: msg
+                    .tool_calls
+                    .as_ref()
+                    .and_then(|tc| serde_json::from_str(tc).ok()),
                 tool_call_id: msg.tool_call_id.clone(),
             });
         }
@@ -108,19 +107,25 @@ impl SessionManager {
         });
 
         // Save user message
-        self.message_repo.insert(&agent_db::models::MessageRow {
-            id: user_msg_id,
-            session_id: session_id.to_string(),
-            role: "user".into(),
-            content: user_message.to_string(),
-            tool_calls: None,
-            tool_call_id: None,
-            created_at: String::new(),
-        }).await?;
+        self.message_repo
+            .insert(&agent_db::models::MessageRow {
+                id: user_msg_id,
+                session_id: session_id.to_string(),
+                role: "user".into(),
+                content: user_message.to_string(),
+                tool_calls: None,
+                tool_call_id: None,
+                created_at: String::new(),
+            })
+            .await?;
 
         // Agent loop: LLM <-> Tool calls
         let tools_defs = self.tools.get_definitions().await;
-        let tools = if tools_defs.is_empty() { None } else { Some(tools_defs.clone()) }; // clone for reuse
+        let tools = if tools_defs.is_empty() {
+            None
+        } else {
+            Some(tools_defs.clone())
+        }; // clone for reuse
 
         let mut iteration = 0;
         loop {
@@ -145,7 +150,9 @@ impl SessionManager {
 
             let response = self.llm.chat(&request).await?;
 
-            let choice = response.choices.first()
+            let choice = response
+                .choices
+                .first()
                 .ok_or_else(|| CoreError::LlmApi("No choices in response".into()))?;
 
             let msg = &choice.message;
@@ -155,29 +162,33 @@ impl SessionManager {
                 if tool_calls.is_empty() || choice.finish_reason.as_deref() == Some("stop") {
                     // No more tool calls — final response
                     let assistant_msg_id = Uuid::new_v4().to_string();
-                    self.message_repo.insert(&agent_db::models::MessageRow {
-                        id: assistant_msg_id,
-                        session_id: session_id.to_string(),
-                        role: "assistant".into(),
-                        content: msg.content.clone(),
-                        tool_calls: if tool_calls.is_empty() { None } else {
-                            match serde_json::to_string(tool_calls) {
-                                Ok(json) => Some(json),
-                                Err(e) => {
-                                    tracing::warn!(
-                                        "Failed to serialize tool_calls for session {}: {}",
-                                        session_id, e
-                                    );
-                                    None
+                    self.message_repo
+                        .insert(&agent_db::models::MessageRow {
+                            id: assistant_msg_id,
+                            session_id: session_id.to_string(),
+                            role: "assistant".into(),
+                            content: msg.content.clone(),
+                            tool_calls: if tool_calls.is_empty() {
+                                None
+                            } else {
+                                match serde_json::to_string(tool_calls) {
+                                    Ok(json) => Some(json),
+                                    Err(e) => {
+                                        tracing::warn!(
+                                            "Failed to serialize tool_calls for session {}: {}",
+                                            session_id,
+                                            e
+                                        );
+                                        None
+                                    }
                                 }
-                            }
-                        },
-                        tool_call_id: None,
-                        created_at: String::new(),
-                    }).await?;
+                            },
+                            tool_call_id: None,
+                            created_at: String::new(),
+                        })
+                        .await?;
 
-                    self.session_repo.touch(session_id).await
-                        ?;
+                    self.session_repo.touch(session_id).await?;
 
                     return Ok(msg.content.clone());
                 }
@@ -208,15 +219,17 @@ impl SessionManager {
                     });
 
                     // Save tool message
-                    self.message_repo.insert(&agent_db::models::MessageRow {
-                        id: Uuid::new_v4().to_string(),
-                        session_id: session_id.to_string(),
-                        role: "tool".into(),
-                        content: format!("Tool: {}", tc.function.name),
-                        tool_calls: None,
-                        tool_call_id: Some(tc.id.clone()),
-                        created_at: String::new(),
-                    }).await?;
+                    self.message_repo
+                        .insert(&agent_db::models::MessageRow {
+                            id: Uuid::new_v4().to_string(),
+                            session_id: session_id.to_string(),
+                            role: "tool".into(),
+                            content: format!("Tool: {}", tc.function.name),
+                            tool_calls: None,
+                            tool_call_id: Some(tc.id.clone()),
+                            created_at: String::new(),
+                        })
+                        .await?;
                 }
 
                 // Continue loop — LLM will process tool results
@@ -225,30 +238,34 @@ impl SessionManager {
 
             // No tool calls — final assistant response
             let assistant_msg_id = Uuid::new_v4().to_string();
-            let tool_calls_json = msg.tool_calls.as_ref()
-                .and_then(|tc| match serde_json::to_string(tc) {
-                    Ok(json) => Some(json),
-                    Err(e) => {
-                        tracing::warn!(
-                            "Failed to serialize tool_calls for session {}: {}",
-                            session_id, e
-                        );
-                        None
-                    }
-                });
+            let tool_calls_json =
+                msg.tool_calls
+                    .as_ref()
+                    .and_then(|tc| match serde_json::to_string(tc) {
+                        Ok(json) => Some(json),
+                        Err(e) => {
+                            tracing::warn!(
+                                "Failed to serialize tool_calls for session {}: {}",
+                                session_id,
+                                e
+                            );
+                            None
+                        }
+                    });
 
-            self.message_repo.insert(&agent_db::models::MessageRow {
-                id: assistant_msg_id,
-                session_id: session_id.to_string(),
-                role: "assistant".into(),
-                content: msg.content.clone(),
-                tool_calls: tool_calls_json,
-                tool_call_id: None,
-                created_at: String::new(),
-            }).await?;
+            self.message_repo
+                .insert(&agent_db::models::MessageRow {
+                    id: assistant_msg_id,
+                    session_id: session_id.to_string(),
+                    role: "assistant".into(),
+                    content: msg.content.clone(),
+                    tool_calls: tool_calls_json,
+                    tool_call_id: None,
+                    created_at: String::new(),
+                })
+                .await?;
 
-            self.session_repo.touch(session_id).await
-                ?;
+            self.session_repo.touch(session_id).await?;
 
             return Ok(msg.content.clone());
         }
@@ -285,19 +302,15 @@ impl SessionManager {
         let user_message_owned = user_message.to_string();
         let model_owned = model.map(ToString::to_string);
 
-        let (tx, rx) =
-            tokio::sync::mpsc::channel::<Result<serde_json::Value, CoreError>>(64);
+        let (tx, rx) = tokio::sync::mpsc::channel::<Result<serde_json::Value, CoreError>>(64);
 
         tokio::spawn(async move {
             let result = async {
                 // Load session
                 let session = session_repo
                     .get(&session_id_owned)
-                    .await
-                    ?
-                    .ok_or_else(|| {
-                        CoreError::SessionNotFound(session_id_owned.clone())
-                    })?;
+                    .await?
+                    .ok_or_else(|| CoreError::SessionNotFound(session_id_owned.clone()))?;
 
                 let model = model_owned.as_deref().unwrap_or(&session.model);
                 let system_prompt = session.system_prompt.as_deref();
@@ -313,10 +326,7 @@ impl SessionManager {
                     });
                 }
 
-                let history = message_repo
-                    .list_by_session(&session_id_owned)
-                    .await
-                    ?;
+                let history = message_repo.list_by_session(&session_id_owned).await?;
 
                 for msg in &history {
                     messages.push(ChatMessage {
@@ -347,17 +357,15 @@ impl SessionManager {
                         tool_call_id: None,
                         created_at: String::new(),
                     })
-                    .await
-                    ?;
+                    .await?;
 
                 // Agent loop
                 let tools_defs = tools.get_definitions().await;
-                let tools_param =
-                    if tools_defs.is_empty() {
-                        None
-                    } else {
-                        Some(tools_defs.clone())
-                    };
+                let tools_param = if tools_defs.is_empty() {
+                    None
+                } else {
+                    Some(tools_defs.clone())
+                };
 
                 let mut iteration = 0;
                 loop {
@@ -395,20 +403,18 @@ impl SessionManager {
 
                     let response = llm.chat(&request).await?;
 
-                    let choice =
-                        response.choices.first().ok_or_else(|| {
-                            CoreError::LlmApi("No choices in response".into())
-                        })?;
+                    let choice = response
+                        .choices
+                        .first()
+                        .ok_or_else(|| CoreError::LlmApi("No choices in response".into()))?;
                     let msg = &choice.message;
 
                     // --- Tool call branch ---
                     if let Some(ref call_groups) = msg.tool_calls {
-                        if call_groups.is_empty()
-                            || choice.finish_reason.as_deref() == Some("stop")
+                        if call_groups.is_empty() || choice.finish_reason.as_deref() == Some("stop")
                         {
                             // Empty tool-calls list or forced stop — treat as final
-                            let assistant_msg_id =
-                                uuid::Uuid::new_v4().to_string();
+                            let assistant_msg_id = uuid::Uuid::new_v4().to_string();
                             let tc_json = if call_groups.is_empty() {
                                 None
                             } else {
@@ -417,7 +423,8 @@ impl SessionManager {
                                     Err(e) => {
                                         tracing::warn!(
                                             "Failed to serialize tool_calls for session {}: {}",
-                                            session_id_owned, e
+                                            session_id_owned,
+                                            e
                                         );
                                         None
                                     }
@@ -434,13 +441,9 @@ impl SessionManager {
                                     tool_call_id: None,
                                     created_at: String::new(),
                                 })
-                                .await
-                                ?;
+                                .await?;
 
-                            session_repo
-                                .touch(&session_id_owned)
-                                .await
-                                ?;
+                            session_repo.touch(&session_id_owned).await?;
 
                             // Stream content in chunks
                             for chunk in chunk_text(&msg.content, 12) {
@@ -481,8 +484,7 @@ impl SessionManager {
 
                             let args: serde_json::Value =
                                 serde_json::from_str(&tc.function.arguments)?;
-                            let exec_result =
-                                tools.execute(&tc.function.name, args).await;
+                            let exec_result = tools.execute(&tc.function.name, args).await;
 
                             let tool_content = match &exec_result {
                                 Ok(r) => r.content.clone(),
@@ -509,16 +511,12 @@ impl SessionManager {
                                     id: uuid::Uuid::new_v4().to_string(),
                                     session_id: session_id_owned.clone(),
                                     role: "tool".into(),
-                                    content: format!(
-                                        "Tool: {}",
-                                        tc.function.name
-                                    ),
+                                    content: format!("Tool: {}", tc.function.name),
                                     tool_calls: None,
                                     tool_call_id: Some(tc.id.clone()),
                                     created_at: String::new(),
                                 })
-                                .await
-                                ?;
+                                .await?;
                         }
 
                         let _ = tx
@@ -533,19 +531,20 @@ impl SessionManager {
 
                     // --- No tool calls — final assistant response ---
                     let assistant_msg_id = uuid::Uuid::new_v4().to_string();
-                    let tool_calls_json = msg
-                        .tool_calls
-                        .as_ref()
-                        .and_then(|tc| match serde_json::to_string(tc) {
-                            Ok(json) => Some(json),
-                            Err(e) => {
-                                tracing::warn!(
-                                    "Failed to serialize tool_calls for session {}: {}",
-                                    session_id_owned, e
-                                );
-                                None
-                            }
-                        });
+                    let tool_calls_json =
+                        msg.tool_calls
+                            .as_ref()
+                            .and_then(|tc| match serde_json::to_string(tc) {
+                                Ok(json) => Some(json),
+                                Err(e) => {
+                                    tracing::warn!(
+                                        "Failed to serialize tool_calls for session {}: {}",
+                                        session_id_owned,
+                                        e
+                                    );
+                                    None
+                                }
+                            });
 
                     message_repo
                         .insert(&agent_db::models::MessageRow {
@@ -557,13 +556,9 @@ impl SessionManager {
                             tool_call_id: None,
                             created_at: String::new(),
                         })
-                        .await
-                        ?;
+                        .await?;
 
-                    session_repo
-                        .touch(&session_id_owned)
-                        .await
-                        ?;
+                    session_repo.touch(&session_id_owned).await?;
 
                     // Stream content in chunks
                     for chunk in chunk_text(&msg.content, 12) {
@@ -584,9 +579,7 @@ impl SessionManager {
                     return Ok(());
                 }
 
-                Err(CoreError::LlmApi(
-                    "Max tool iterations exceeded".into(),
-                ))
+                Err(CoreError::LlmApi("Max tool iterations exceeded".into()))
             };
 
             if let Err(e) = result.await {
@@ -707,7 +700,10 @@ mod tests {
         let words: Vec<String> = (0..5000).map(|i| format!("word{}", i)).collect();
         let text = words.join(" ");
         let chunks = chunk_text(&text, 12);
-        assert!(chunks.len() > 1, "Very long message should produce multiple chunks");
+        assert!(
+            chunks.len() > 1,
+            "Very long message should produce multiple chunks"
+        );
         let full_len: usize = chunks.iter().map(|c| c.len()).sum();
         assert_eq!(full_len, text.len(), "All content should be preserved");
     }
@@ -724,7 +720,11 @@ mod tests {
         // Text with no spaces - should return as single chunk regardless of size
         let long_no_space = "x".repeat(5000);
         let chunks = chunk_text(&long_no_space, 12);
-        assert_eq!(chunks.len(), 1, "Text without spaces should be a single chunk");
+        assert_eq!(
+            chunks.len(),
+            1,
+            "Text without spaces should be a single chunk"
+        );
         assert_eq!(chunks[0].len(), 5000);
     }
 }

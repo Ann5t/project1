@@ -72,11 +72,7 @@ impl DeepSeekClient {
     /// * `api_key` - DeepSeek API key (from platform.deepseek.com).
     /// * `base_url` - Optional API base URL (defaults to `https://api.deepseek.com/v1`).
     /// * `default_model` - Optional default model name (defaults to `deepseek-chat`).
-    pub fn new(
-        api_key: String,
-        base_url: Option<String>,
-        default_model: Option<String>,
-    ) -> Self {
+    pub fn new(api_key: String, base_url: Option<String>, default_model: Option<String>) -> Self {
         let client = Client::builder()
             .timeout(Duration::from_secs(120))
             .pool_max_idle_per_host(10)
@@ -194,9 +190,10 @@ impl DeepSeekClient {
                 }
 
                 if !status.is_success() {
-                    let body = resp.text().await.unwrap_or_else(|e| {
-                        format!("<failed to read response body: {e}>")
-                    });
+                    let body = resp
+                        .text()
+                        .await
+                        .unwrap_or_else(|e| format!("<failed to read response body: {e}>"));
                     let _ = tx
                         .send(Err(CoreError::LlmApi(format!(
                             "HTTP {}: {body}",
@@ -346,9 +343,10 @@ impl LlmClient for DeepSeekClient {
         }
 
         if !status.is_success() {
-            let body = resp.text().await.unwrap_or_else(|e| {
-                format!("<failed to read response body: {e}>")
-            });
+            let body = resp
+                .text()
+                .await
+                .unwrap_or_else(|e| format!("<failed to read response body: {e}>"));
             stats::record_llm_error();
             return Err(CoreError::LlmApi(format!(
                 "HTTP {}: {body}",

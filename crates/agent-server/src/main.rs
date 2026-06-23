@@ -6,29 +6,31 @@ use agent_server::state;
 
 use std::sync::Arc;
 
+use axum::http::StatusCode;
 use axum::middleware as axum_mw;
 use axum::routing::{delete, get, post, put};
 use axum::Router;
-use axum::http::StatusCode;
 use std::time::Duration;
 
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
-use tower_http::cors::{CorsLayer, Any};
+use tower_http::cors::{Any, CorsLayer};
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 
 use agent_core::llm::client::DeepSeekClient;
+use agent_core::tool::builtin::{
+    CalculatorTool, CurrentTimeTool, ExecuteShellTool, ReadFileTool, WebSearchTool,
+};
 use agent_core::tool::registry::ToolRegistry;
-use agent_core::tool::builtin::{CalculatorTool, CurrentTimeTool, ExecuteShellTool, ReadFileTool, WebSearchTool};
-use state::AppState;
 use config::ServerConfig;
+use state::AppState;
 
+use futures::future::FutureExt;
 use std::task::{Context, Poll};
 use tower::{Layer, Service};
-use futures::future::FutureExt;
 
 /// Helper: map the result of a tokio timeout so `Elapsed` becomes an
 /// `Ok(408 response)` and the error type stays `Infallible`.
@@ -61,7 +63,9 @@ impl RequestTimeoutLayer {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(default_secs);
-        Self { duration: Duration::from_secs(secs) }
+        Self {
+            duration: Duration::from_secs(secs),
+        }
     }
 }
 
@@ -112,9 +116,7 @@ where
 async fn main() -> anyhow::Result<()> {
     // Initialize tracing
     tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::from_default_env()
-        )
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
 
     // Load configuration
@@ -185,18 +187,14 @@ async fn main() -> anyhow::Result<()> {
     );
 
     // Get LLM configuration from DB
-    let api_key = {
-        config_repo.get("api_key").await?.unwrap_or_default()
-    };
+    let api_key = { config_repo.get("api_key").await?.unwrap_or_default() };
 
     // Create LLM client (keep concrete type for shutdown signalling)
-    let deepseek = Arc::new(
-        DeepSeekClient::new(
-            api_key,
-            Some("https://api.deepseek.com/v1".into()),
-            Some("deepseek-chat".into()),
-        ),
-    );
+    let deepseek = Arc::new(DeepSeekClient::new(
+        api_key,
+        Some("https://api.deepseek.com/v1".into()),
+        Some("deepseek-chat".into()),
+    ));
     let llm_shutdown_notify = deepseek.shutdown_notify.clone();
     let llm: Arc<dyn agent_core::llm::client::LlmClient + Send + Sync> = deepseek.clone();
 
@@ -213,7 +211,9 @@ async fn main() -> anyhow::Result<()> {
         .map(|v| v.to_lowercase() == "true" || v == "1")
         .unwrap_or(false);
     if shell_enabled {
-        tracing::warn!("ExecuteShellTool is ENABLED. This allows shell command execution on the server.");
+        tracing::warn!(
+            "ExecuteShellTool is ENABLED. This allows shell command execution on the server."
+        );
         tools.register(Arc::new(ExecuteShellTool::from_env())).await;
     } else {
         tracing::info!("ExecuteShellTool is disabled. Set SHELL_TOOL_ENABLED=true to enable it.");
@@ -288,7 +288,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/sessions/{id}", get(routes::session::get_one))
         .route("/api/sessions/{id}", put(routes::session::update))
         .route("/api/sessions/{id}", delete(routes::session::delete))
-        .route("/api/sessions/{id}/messages", get(routes::session::messages))
+        .route(
+            "/api/sessions/{id}/messages",
+            get(routes::session::messages),
+        )
         // Search
         .route("/api/search", get(routes::search::search))
         // Chat (with its own rate-limiter layer)
@@ -299,10 +302,22 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/channels/{id}", put(routes::channel::update))
         .route("/api/channels/{id}", delete(routes::channel::delete))
         .route("/api/channels/{id}/test", post(routes::channel::test))
-        .route("/api/channels/feishu/callback", post(routes::channel::feishu_callback))
-        .route("/api/channels/wechat_work/callback", get(routes::channel::wechat_work_verify))
-        .route("/api/channels/wechat_work/callback", post(routes::channel::wechat_work_callback))
-        .route("/api/channels/webhook/{path}", post(routes::channel::webhook_callback))
+        .route(
+            "/api/channels/feishu/callback",
+            post(routes::channel::feishu_callback),
+        )
+        .route(
+            "/api/channels/wechat_work/callback",
+            get(routes::channel::wechat_work_verify),
+        )
+        .route(
+            "/api/channels/wechat_work/callback",
+            post(routes::channel::wechat_work_callback),
+        )
+        .route(
+            "/api/channels/webhook/{path}",
+            post(routes::channel::webhook_callback),
+        )
         // Workflows
         .route("/api/workflows", get(routes::workflow::list))
         .route("/api/workflows", post(routes::workflow::create))
@@ -321,8 +336,14 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/tasks/{id}/logs", get(routes::task::logs))
         // Monitor
         .route("/api/monitor", get(routes::monitor::monitor))
-        .route("/api/monitor/reset", axum::routing::post(routes::monitor::monitor_reset))
-        .route("/api/monitor/timeseries", get(routes::monitor::monitor_timeseries))
+        .route(
+            "/api/monitor/reset",
+            axum::routing::post(routes::monitor::monitor_reset),
+        )
+        .route(
+            "/api/monitor/timeseries",
+            get(routes::monitor::monitor_timeseries),
+        )
         // WebSocket real-time events
         .route("/api/ws", get(routes::ws::ws_handler))
         // Backup
@@ -330,14 +351,26 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/backup/restore", post(routes::backup::restore))
         .route("/api/backup/list", get(routes::backup::list_backups))
         // Export
-        .route("/api/export/session/{id}", get(routes::export::export_session))
-        .route("/api/export/workflow/{id}/runs", get(routes::export::export_workflow_runs))
+        .route(
+            "/api/export/session/{id}",
+            get(routes::export::export_session),
+        )
+        .route(
+            "/api/export/workflow/{id}/runs",
+            get(routes::export::export_workflow_runs),
+        )
         .route("/api/export/bulk", post(routes::export::export_bulk))
         // Publish
         .route("/p/{publish_id}", get(routes::publish::get_published))
-        .route("/api/publish/{id}", delete(routes::publish::delete_published))
+        .route(
+            "/api/publish/{id}",
+            delete(routes::publish::delete_published),
+        )
         // Notifications
-        .route("/api/notifications/test-email", post(routes::notifications::test_email))
+        .route(
+            "/api/notifications/test-email",
+            post(routes::notifications::test_email),
+        )
         // OpenAPI / Docs
         .route("/api/openapi.json", get(routes::openapi::openapi_json))
         .route("/api/docs", get(routes::openapi::api_docs))
@@ -348,8 +381,7 @@ async fn main() -> anyhow::Result<()> {
         ));
 
     // Monitor dashboard (serves HTML at /monitor)
-    let monitor_router = Router::new()
-        .route("/monitor", get(routes::monitor::monitor_dashboard));
+    let monitor_router = Router::new().route("/monitor", get(routes::monitor::monitor_dashboard));
 
     // Static file serving for SPA frontend with cache headers for assets
     let frontend_dir = std::path::Path::new(&config.frontend_dir);
@@ -357,7 +389,10 @@ async fn main() -> anyhow::Result<()> {
         info!("Serving frontend from: {}", frontend_dir.display());
         ServeDir::new(frontend_dir)
     } else {
-        info!("Frontend directory not found at: {}. Using embedded fallback.", frontend_dir.display());
+        info!(
+            "Frontend directory not found at: {}. Using embedded fallback.",
+            frontend_dir.display()
+        );
         // Fallback: serve an embedded HTML response
         ServeDir::new(".")
     };
@@ -387,7 +422,8 @@ async fn main() -> anyhow::Result<()> {
                             Err(e) => {
                                 tracing::warn!(
                                     "Ignoring invalid CORS_ORIGIN value {:?}: {}",
-                                    trimmed, e
+                                    trimmed,
+                                    e
                                 );
                                 None
                             }
@@ -418,9 +454,7 @@ async fn main() -> anyhow::Result<()> {
         ))
         // Security headers — applied outside rate-limit and monitoring so
         // every response (including 429, 401, 413) carries security headers.
-        .layer(axum_mw::from_fn(
-            middleware::security_headers,
-        ))
+        .layer(axum_mw::from_fn(middleware::security_headers))
         // Body size limit (10 MB)
         .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024))
         // Request timeout (60 s, configurable via env).
